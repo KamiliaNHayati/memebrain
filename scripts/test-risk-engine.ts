@@ -36,9 +36,11 @@ function evaluateRule1(data: TokenData): RiskRule {
   const suspendedHoneypot = data.status === 'SUSPENDED';
   const onChainHoneypot = data.isRecipientContract && data.recipientAddress !== '';
   const triggered = taxHoneypot || suspendedHoneypot || onChainHoneypot;
+  // SUSPENDED = platform-confirmed exploit → heavier penalty
+  const impact = suspendedHoneypot ? -65 : triggered ? -40 : 0;
   return {
     id: 'rule-1', name: 'Honeypot Recipient', severity: 'critical',
-    passed: !triggered, scoreImpact: triggered ? -40 : 0,
+    passed: !triggered, scoreImpact: impact,
     message: triggered ? 'CRITICAL' : 'SAFE',
   };
 }
@@ -193,10 +195,14 @@ console.log('\n🛡️  Rule 1 — Honeypot Recipient:');
 
   const honeypot = { ...safe, isRecipientContract: true };
   assert(evaluateRule1(honeypot).passed === false, 'Contract recipient → FAIL');
-  assert(evaluateRule1(honeypot).scoreImpact === -40, 'Impact = -40');
+  assert(evaluateRule1(honeypot).scoreImpact === -40, 'TaxToken honeypot impact = -40');
 
   const suspended = { ...safeTaxToken(), isTaxToken: false, status: 'SUSPENDED' };
   assert(evaluateRule1(suspended).passed === false, 'SUSPENDED status → FAIL');
+  assert(evaluateRule1(suspended).scoreImpact === -65, 'SUSPENDED impact = -65 (platform-confirmed)');
+
+  const suspendedTax = { ...safe, isRecipientContract: true, status: 'SUSPENDED' };
+  assert(evaluateRule1(suspendedTax).scoreImpact === -65, 'SUSPENDED + TaxToken → still -65 (worse wins)');
 
   const noTax = { ...safeTaxToken(), isTaxToken: false, recipientRate: 0, isRecipientContract: false, status: 'PUBLISH' };
   assert(evaluateRule1(noTax).passed === true, 'Non-TaxToken, active → PASS');

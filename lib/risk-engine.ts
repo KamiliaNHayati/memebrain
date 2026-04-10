@@ -74,20 +74,24 @@ export interface RiskResult {
 // ── Rule Definitions ─────────────────────────────────────────
 
 function evaluateRule1(data: TokenData): RiskRule {
-  // Three honeypot signals:
-  // 1. TaxToken with recipientAddress that is a contract
-  // 2. Token status is SUSPENDED (Four.meme detected exploit)
-  // 3. V9 token with on-chain recipientAddress that is a contract
+  // Three honeypot signals (ordered by severity):
+  // 1. Token status is SUSPENDED (Four.meme confirmed exploit) → -60
+  // 2. TaxToken with recipientAddress that is a contract → -40
+  // 3. V9 token with on-chain recipientAddress that is a contract → -40
   const taxHoneypot = data.isTaxToken && data.recipientRate > 0 && data.isRecipientContract;
   const suspendedHoneypot = data.status === 'SUSPENDED';
   const onChainHoneypot = data.isRecipientContract && data.recipientAddress !== '';
   const triggered = taxHoneypot || suspendedHoneypot || onChainHoneypot;
+
+  // SUSPENDED = platform-confirmed exploit → heavier penalty
+  const impact = suspendedHoneypot ? -65 : triggered ? -40 : 0;
+
   return {
     id: 'rule-1',
     name: 'Honeypot Recipient',
     severity: 'critical',
     passed: !triggered,
-    scoreImpact: triggered ? -40 : 0,
+    scoreImpact: impact,
     message: triggered
       ? suspendedHoneypot && !taxHoneypot
         ? 'CRITICAL: Token has been SUSPENDED by Four.meme. This token was flagged as an exploit — sells will likely fail.'
