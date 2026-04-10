@@ -1,12 +1,12 @@
 // app/api/risk/scan/route.ts
 // Risk Scanner API — accepts a token address and returns risk score + audit trail.
-// Supports mock mode for demo reliability.
+// Supports mock mode for demo reliability. Live mode runs the full 8-rule engine.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode } from '@/lib/config';
 import { MOCK_DEFAULTS } from '@/lib/mock-data';
-import { provider } from '@/lib/bsc';
 import { TEST_TOKENS } from '@/lib/constants';
+import { analyzeToken } from '@/lib/risk-engine';
 
 export const maxDuration = 60; // Vercel timeout extension
 
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
 
     // ── Mock Mode ──────────────────────────────────────────
     if (isMockMode(request.url)) {
-      // Return appropriate mock based on address
       const mockResponse = getMockForAddress(address);
       return NextResponse.json({
         ...mockResponse,
@@ -41,22 +40,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // ── Live Mode ──────────────────────────────────────────
-    // Day 3 will implement the full risk engine here.
-    // For now (Day 1), verify we can read on-chain data.
-
-    const code = await provider.getCode(address);
-    const isContract = code !== '0x';
+    // ── Live Mode — Full 8-Rule Risk Engine ────────────────
+    const result = await analyzeToken(address);
 
     return NextResponse.json({
-      tokenAddress: address,
+      ...result,
       mode: 'live',
-      isContract,
-      codeLength: code.length,
-      message: isContract
-        ? 'Address is a smart contract. Full risk scan coming Day 3.'
-        : 'Address is an EOA (regular wallet), not a token contract.',
-      note: 'Full 8-rule risk engine will be implemented on Day 3.',
     });
   } catch (error) {
     return NextResponse.json(
@@ -71,15 +60,14 @@ export async function POST(request: NextRequest) {
 
 /**
  * Return the appropriate mock data based on the token address.
- * Defaults to the critical (honeypot) mock for unknown addresses.
  */
 function getMockForAddress(address: string) {
   const lower = address.toLowerCase();
 
   if (lower === TEST_TOKENS.CRITICAL_HONEYPOT.toLowerCase()) {
-    return MOCK_DEFAULTS['/api/risk/scan']; // critical
+    return MOCK_DEFAULTS['/api/risk/scan']; // critical mock
   }
 
-  // Default to critical for demo impact
+  // Default to critical mock for demo impact
   return MOCK_DEFAULTS['/api/risk/scan'];
 }
