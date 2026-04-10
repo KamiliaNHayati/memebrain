@@ -1,0 +1,84 @@
+{
+  "tokenAddress": "0xabcdef1234567890abcdef1234567890abcdef12",
+  "score": 62,
+  "riskLevel": "MEDIUM",
+  "summary": "This token has some concerning features. The fee rate is at the maximum 10%, and holder rewards are relatively low compared to creator allocation. Exercise caution.",
+  "rules": [
+    {
+      "id": "rule-1",
+      "name": "Honeypot Recipient",
+      "severity": "critical",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Recipient address is a regular wallet (EOA). No honeypot risk."
+    },
+    {
+      "id": "rule-2",
+      "name": "Predatory Tax Config",
+      "severity": "high",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Tax distribution is within acceptable range."
+    },
+    {
+      "id": "rule-3",
+      "name": "Extreme Fee Rate",
+      "severity": "medium",
+      "passed": false,
+      "scoreImpact": -15,
+      "message": "MEDIUM: 10% fee on every trade is very high."
+    },
+    {
+      "id": "rule-4",
+      "name": "No Anti-Sniper Protection",
+      "severity": "low",
+      "passed": false,
+      "scoreImpact": -10,
+      "message": "LOW: Anti-sniper mode disabled. Bots may front-run early trades."
+    },
+    {
+      "id": "rule-5",
+      "name": "Zero Holder Rewards",
+      "severity": "high",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Holders receive a share of tax fees."
+    },
+    {
+      "id": "rule-6",
+      "name": "Bonding Curve Health",
+      "severity": "info",
+      "passed": false,
+      "scoreImpact": 0,
+      "message": "Bonding curve at 45% — moderate demand."
+    },
+    {
+      "id": "rule-7",
+      "name": "Dividend Sniper Risk",
+      "severity": "info",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "No suspicious sniper activity detected."
+    },
+    {
+      "id": "rule-8",
+      "name": "Fresh Creator Check",
+      "severity": "high",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Creator wallet has been active for 3 months."
+    }
+  ],
+  "tokenInfo": {
+    "name": "DogeMaster",
+    "symbol": "DGMSTR",
+    "feeRate": 10,
+    "recipientRate": 30,
+    "divideRate": 25,
+    "liquidityRate": 25,
+    "burnRate": 20,
+    "recipientAddress": "0x9876543210FEDCBA9876543210FEDCBA98765432",
+    "isRecipientContract": false
+  },
+  "scannedAt": "2026-04-10T10:00:00Z"
+}

@@ -1,0 +1,11 @@
+{
+  "tokenAddress": "0xe9d11f369df3cece5c9fbcf6354123f58dafffff",
+  "feeAccumulated": "847000000000000000",
+  "minDispatch": "1000000000000000000",
+  "progressPercent": 84.7,
+  "feeRate": 10,
+  "gasPrice": "3.2",
+  "sniperAlert": false,
+  "recommendation": "Fee pool at 84.7%. No immediate claiming needed — wait for dispatch event.",
+  "lastUpdated": "2026-04-10T10:00:00Z"
+}

@@ -1,0 +1,84 @@
+{
+  "tokenAddress": "0xe9d11f369df3cece5c9fbcf6354123f58dafffff",
+  "score": 12,
+  "riskLevel": "CRITICAL",
+  "summary": "This token has critical security issues. The tax fee recipient is a smart contract address, which is the exact pattern from the April 3rd TaxToken incident. Selling this token will likely fail.",
+  "rules": [
+    {
+      "id": "rule-1",
+      "name": "Honeypot Recipient",
+      "severity": "critical",
+      "passed": false,
+      "scoreImpact": -40,
+      "message": "CRITICAL: Tax fees sent to smart contract. Sells may fail. This is the exact pattern from the April 3rd incident."
+    },
+    {
+      "id": "rule-2",
+      "name": "Predatory Tax Config",
+      "severity": "high",
+      "passed": false,
+      "scoreImpact": -30,
+      "message": "HIGH: Creator takes >50% of tax fees with minimal holder rewards."
+    },
+    {
+      "id": "rule-3",
+      "name": "Extreme Fee Rate",
+      "severity": "medium",
+      "passed": false,
+      "scoreImpact": -15,
+      "message": "MEDIUM: 10% fee on every trade is very high."
+    },
+    {
+      "id": "rule-4",
+      "name": "No Anti-Sniper Protection",
+      "severity": "low",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Anti-sniper mode is enabled."
+    },
+    {
+      "id": "rule-5",
+      "name": "Zero Holder Rewards",
+      "severity": "high",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Holders receive a share of rewards."
+    },
+    {
+      "id": "rule-6",
+      "name": "Bonding Curve Health",
+      "severity": "info",
+      "passed": false,
+      "scoreImpact": 0,
+      "message": "Bonding curve not yet near graduation."
+    },
+    {
+      "id": "rule-7",
+      "name": "Dividend Sniper Risk",
+      "severity": "info",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "No suspicious sniper activity detected."
+    },
+    {
+      "id": "rule-8",
+      "name": "Fresh Creator Check",
+      "severity": "high",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Creator wallet has sufficient age."
+    }
+  ],
+  "tokenInfo": {
+    "name": "HoneypotToken",
+    "symbol": "HPOT",
+    "feeRate": 10,
+    "recipientRate": 80,
+    "divideRate": 5,
+    "liquidityRate": 5,
+    "burnRate": 10,
+    "recipientAddress": "0xDEAD000000000000000000000000000000000000",
+    "isRecipientContract": true
+  },
+  "scannedAt": "2026-04-10T10:00:00Z"
+}

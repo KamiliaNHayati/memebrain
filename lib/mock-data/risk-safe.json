@@ -1,0 +1,84 @@
+{
+  "tokenAddress": "0x1234567890abcdef1234567890abcdef12345678",
+  "score": 87,
+  "riskLevel": "LOW",
+  "summary": "This token has a healthy configuration. Reasonable tax rates with fair distribution to holders. The bonding curve shows strong demand and is approaching graduation.",
+  "rules": [
+    {
+      "id": "rule-1",
+      "name": "Honeypot Recipient",
+      "severity": "critical",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Recipient address is a regular wallet (EOA). No honeypot risk."
+    },
+    {
+      "id": "rule-2",
+      "name": "Predatory Tax Config",
+      "severity": "high",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Tax distribution is fair. Holders receive adequate rewards."
+    },
+    {
+      "id": "rule-3",
+      "name": "Extreme Fee Rate",
+      "severity": "medium",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Fee rate is 5% — within acceptable range."
+    },
+    {
+      "id": "rule-4",
+      "name": "No Anti-Sniper Protection",
+      "severity": "low",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Anti-sniper mode is enabled."
+    },
+    {
+      "id": "rule-5",
+      "name": "Zero Holder Rewards",
+      "severity": "high",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Holders receive 40% of tax fees."
+    },
+    {
+      "id": "rule-6",
+      "name": "Bonding Curve Health",
+      "severity": "info",
+      "passed": true,
+      "scoreImpact": 15,
+      "message": "POSITIVE: Strong demand, nearing graduation."
+    },
+    {
+      "id": "rule-7",
+      "name": "Dividend Sniper Risk",
+      "severity": "info",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "No suspicious sniper activity detected."
+    },
+    {
+      "id": "rule-8",
+      "name": "Fresh Creator Check",
+      "severity": "high",
+      "passed": true,
+      "scoreImpact": 0,
+      "message": "Creator wallet is well-established."
+    }
+  ],
+  "tokenInfo": {
+    "name": "SafeMoon Classic",
+    "symbol": "SMC",
+    "feeRate": 5,
+    "recipientRate": 20,
+    "divideRate": 40,
+    "liquidityRate": 30,
+    "burnRate": 10,
+    "recipientAddress": "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
+    "isRecipientContract": false
+  },
+  "scannedAt": "2026-04-10T10:00:00Z"
+}

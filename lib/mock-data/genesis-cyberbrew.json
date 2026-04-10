@@ -1,0 +1,26 @@
+{
+  "token": {
+    "name": "CyberBrew",
+    "symbol": "CYBREW",
+    "description": "The first AI-powered coffee token on BSC. Fuel your mornings, fuel your portfolio. Each transaction brews value for holders through dividend-powered rewards. ☕🤖",
+    "totalSupply": "1000000000",
+    "decimals": 18
+  },
+  "taxConfig": {
+    "feeRate": 5,
+    "rateFounder": 20,
+    "rateHolder": 40,
+    "rateBurn": 10,
+    "rateLiquidity": 30,
+    "preSale": "0",
+    "feePlan": true,
+    "minDispatch": "100000000000000000"
+  },
+  "metadata": {
+    "concept": "AI-powered coffee token",
+    "generatedBy": "MemeBrain AI",
+    "generatedAt": "2026-04-10T10:00:00Z",
+    "imageUrl": "https://image.pollinations.ai/prompt/cyberpunk%20robot%20drinking%20coffee%20neon%20lights%20meme%20token?width=400&height=400&nologo=true",
+    "tags": ["AI", "coffee", "dividend", "BSC"]
+  }
+}
