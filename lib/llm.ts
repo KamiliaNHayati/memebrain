@@ -85,7 +85,8 @@ export const AI_SUGGESTIONS: Array<TokenGenResult & { id: string }> = [
 
 // ── LLM API Client ───────────────────────────────────────────
 
-const BLINK_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const BLINK_API_URL = process.env.BLINK_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
+const BLINK_MODEL = process.env.BLINK_MODEL || 'alibaba/qwen-3-32b';
 
 const SYSTEM_PROMPT = `You are MemeBrain AI, an expert at creating meme token configurations for Four.meme on BNB Smart Chain.
 
@@ -146,7 +147,7 @@ export async function generateTokenFromPrompt(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-sonnet-4-5',
+        model: BLINK_MODEL,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           {
@@ -154,8 +155,8 @@ export async function generateTokenFromPrompt(
             content: `Create a meme token based on this concept: "${prompt.concept}"`,
           },
         ],
-        temperature: 0.8,
-        max_tokens: 500,
+        temperature: 0.7,
+        max_tokens: 800,
       }),
     });
 
@@ -171,7 +172,8 @@ export async function generateTokenFromPrompt(
       throw new Error('Empty LLM response');
     }
 
-    // Parse JSON from response (handle potential markdown wrapping)
+    // Parse JSON from response (handle Qwen thinking blocks, markdown, etc.)
+    console.log('[LLM] Raw response length:', content.length, 'chars');
     const result = extractJSON(content);
 
     // Validate the result
@@ -193,23 +195,47 @@ export async function generateTokenFromPrompt(
  * Extract JSON from LLM response, handling markdown code blocks.
  */
 function extractJSON(content: string): TokenGenResult {
-  // Try parsing directly
   let text = content.trim();
 
-  // Remove markdown code fences
-  if (text.startsWith('```json')) text = text.slice(7);
-  else if (text.startsWith('```')) text = text.slice(3);
-  if (text.endsWith('```')) text = text.slice(0, -3);
-  text = text.trim();
+  // 1. Strip <think>...</think> blocks (Qwen reasoning)
+  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
+  // 2. Remove markdown code fences (```json ... ``` or ``` ... ```)
+  const codeFenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeFenceMatch) {
+    text = codeFenceMatch[1].trim();
+  } else {
+    // Remove standalone fences
+    if (text.startsWith('```json')) text = text.slice(7);
+    else if (text.startsWith('```')) text = text.slice(3);
+    if (text.endsWith('```')) text = text.slice(0, -3);
+    text = text.trim();
+  }
+
+  // 3. Try direct parse
   try {
     return JSON.parse(text);
   } catch {
-    // Try to find JSON object in the text
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) {
-      return JSON.parse(match[0]);
+    // 4. Find the outermost JSON object using brace counting
+    const start = text.indexOf('{');
+    if (start !== -1) {
+      let depth = 0;
+      let end = -1;
+      for (let i = start; i < text.length; i++) {
+        if (text[i] === '{') depth++;
+        if (text[i] === '}') depth--;
+        if (depth === 0) { end = i; break; }
+      }
+      if (end !== -1) {
+        try {
+          return JSON.parse(text.slice(start, end + 1));
+        } catch (parseErr) {
+          console.error('[LLM] JSON parse failed. Extracted:', text.slice(start, Math.min(end + 1, start + 200)));
+          throw parseErr;
+        }
+      }
     }
+    console.error('[LLM] No JSON object found in response:', text.slice(0, 300));
     throw new Error('Could not extract JSON from LLM response');
   }
 }

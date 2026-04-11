@@ -2,9 +2,11 @@
 
 // app/genesis/page.tsx
 // AI Token Genesis — describe a concept, AI generates a full token config.
-// Hybrid UI: 3 pre-generated suggestions + custom input.
+// Day 6: Full deploy flow with Four.meme API integration.
 
 import { useState, useCallback, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { useFourMemeAuth } from '@/hooks/use-fourmeme-auth';
 
 interface TokenGenResult {
   name: string;
@@ -27,12 +29,34 @@ interface Suggestion extends TokenGenResult {
   id: string;
 }
 
+interface DeployResult {
+  createArg: string;
+  signature: string;
+  payload: Record<string, unknown>;
+  mode: string;
+  instructions: {
+    step: string;
+    contract: string;
+    method: string;
+    note: string;
+    fee?: string;
+  };
+}
+
 export default function GenesisPage() {
+  const { address, isConnected } = useAccount();
+  const { accessToken, isAuthenticated, login, isLoading: authLoading } = useFourMemeAuth();
+
   const [concept, setConcept] = useState('');
   const [result, setResult] = useState<TokenGenResult | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Deploy state
+  const [deploying, setDeploying] = useState(false);
+  const [deployResult, setDeployResult] = useState<DeployResult | null>(null);
+  const [deployError, setDeployError] = useState<string | null>(null);
 
   // Load pre-generated suggestions on mount
   useEffect(() => {
@@ -48,6 +72,8 @@ export default function GenesisPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setDeployResult(null);
+    setDeployError(null);
 
     try {
       const res = await fetch('/api/genesis/generate', {
@@ -78,7 +104,43 @@ export default function GenesisPage() {
   const selectSuggestion = (suggestion: Suggestion) => {
     setResult({ ...suggestion, source: 'suggestion' });
     setError(null);
+    setDeployResult(null);
+    setDeployError(null);
   };
+
+  // ── Deploy Flow ────────────────────────────────────────────
+  const handleDeploy = useCallback(async () => {
+    if (!result || !accessToken || !address) return;
+
+    setDeploying(true);
+    setDeployError(null);
+    setDeployResult(null);
+
+    try {
+      const res = await fetch('/api/genesis/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenConfig: result,
+          accessToken,
+          walletAddress: address,
+          preSale: '0',
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.details || errData.error || 'Deploy failed');
+      }
+
+      const data: DeployResult = await res.json();
+      setDeployResult(data);
+    } catch (err) {
+      setDeployError(err instanceof Error ? err.message : 'Deploy failed');
+    } finally {
+      setDeploying(false);
+    }
+  }, [result, accessToken, address]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:py-12">
@@ -192,7 +254,7 @@ export default function GenesisPage() {
                 : '📦 Fallback'}
             </span>
             <button
-              onClick={() => setResult(null)}
+              onClick={() => { setResult(null); setDeployResult(null); setDeployError(null); }}
               className="text-xs text-[#52525b] hover:text-white transition-colors"
             >
               ← Back to suggestions
@@ -243,26 +305,10 @@ export default function GenesisPage() {
 
               {/* Distribution Bar */}
               <div className="flex h-3 rounded-full overflow-hidden">
-                <div
-                  className="bg-orange-500"
-                  style={{ width: `${result.taxConfig.rateFounder}%` }}
-                  title={`Creator: ${result.taxConfig.rateFounder}%`}
-                />
-                <div
-                  className="bg-[#22c55e]"
-                  style={{ width: `${result.taxConfig.rateHolder}%` }}
-                  title={`Holders: ${result.taxConfig.rateHolder}%`}
-                />
-                <div
-                  className="bg-red-500"
-                  style={{ width: `${result.taxConfig.rateBurn}%` }}
-                  title={`Burn: ${result.taxConfig.rateBurn}%`}
-                />
-                <div
-                  className="bg-blue-500"
-                  style={{ width: `${result.taxConfig.rateLiquidity}%` }}
-                  title={`Liquidity: ${result.taxConfig.rateLiquidity}%`}
-                />
+                <div className="bg-orange-500" style={{ width: `${result.taxConfig.rateFounder}%` }} />
+                <div className="bg-[#22c55e]" style={{ width: `${result.taxConfig.rateHolder}%` }} />
+                <div className="bg-red-500" style={{ width: `${result.taxConfig.rateBurn}%` }} />
+                <div className="bg-blue-500" style={{ width: `${result.taxConfig.rateLiquidity}%` }} />
               </div>
               <div className="flex items-center gap-4 text-[10px] text-[#52525b]">
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500"/>Creator</span>
@@ -293,18 +339,41 @@ export default function GenesisPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3 pt-2">
-              <button
-                className="inline-flex items-center gap-2 rounded-lg bg-[#22c55e] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#16a34a] transition-colors opacity-60 cursor-not-allowed"
-                disabled
-                title="Coming Day 6"
-              >
-                🚀 Deploy to Four.meme
-                <span className="text-[10px] opacity-70">(Day 6)</span>
-              </button>
+              {!isConnected ? (
+                <div className="text-sm text-[#71717a]">
+                  💡 Connect your wallet to deploy this token to Four.meme
+                </div>
+              ) : !isAuthenticated ? (
+                <button
+                  onClick={login}
+                  disabled={authLoading}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#22c55e] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+                >
+                  {authLoading ? '⏳ Signing in...' : '🔐 Sign in to Four.meme'}
+                </button>
+              ) : (
+                <button
+                  onClick={handleDeploy}
+                  disabled={deploying || !!deployResult}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#22c55e] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+                >
+                  {deploying ? (
+                    <span className="flex items-center gap-2">
+                      <span className="animate-spin">⏳</span> Creating on Four.meme...
+                    </span>
+                  ) : deployResult ? (
+                    '✅ Token Created!'
+                  ) : (
+                    '🚀 Deploy to Four.meme'
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => {
                   setResult(null);
                   setConcept('');
+                  setDeployResult(null);
+                  setDeployError(null);
                 }}
                 className="inline-flex items-center gap-2 rounded-lg border border-[#262626] bg-[#111111] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1a1a1a] transition-colors"
               >
@@ -312,6 +381,66 @@ export default function GenesisPage() {
               </button>
             </div>
           </div>
+
+          {/* Deploy Error */}
+          {deployError && (
+            <div className="rounded-lg border border-red-500/30 bg-red-950/30 p-4 text-sm text-red-300">
+              ❌ Deploy failed: {deployError}
+            </div>
+          )}
+
+          {/* Deploy Result — On-chain signing instructions */}
+          {deployResult && (
+            <div className="rounded-lg border border-[#22c55e]/30 bg-[#22c55e]/5 p-5 space-y-4 animate-in fade-in duration-500">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎉</span>
+                <h3 className="text-base font-bold text-[#22c55e]">
+                  Token Ready for On-Chain Deployment!
+                </h3>
+              </div>
+
+              <p className="text-sm text-[#a1a1aa]">
+                Four.meme has prepared your token. Complete the on-chain transaction to finalize creation.
+              </p>
+
+              {/* Instructions */}
+              <div className="rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] p-4 space-y-2">
+                <p className="text-xs font-semibold text-[#71717a] uppercase tracking-wider">
+                  Next Step
+                </p>
+                <p className="text-sm text-white">
+                  {deployResult.instructions.step}
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[#52525b]">Contract:</span>{' '}
+                    <span className="text-white font-mono">{deployResult.instructions.contract}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#52525b]">Method:</span>{' '}
+                    <span className="text-white font-mono text-[11px]">{deployResult.instructions.method}</span>
+                  </div>
+                </div>
+                {deployResult.instructions.fee && (
+                  <p className="text-xs text-yellow-500">
+                    💰 Fee: {deployResult.instructions.fee}
+                  </p>
+                )}
+              </div>
+
+              {/* createArg + signature (truncated) */}
+              <div className="space-y-2">
+                <DataField label="createArg" value={deployResult.createArg} />
+                <DataField label="signature" value={deployResult.signature} />
+              </div>
+
+              {deployResult.mode === 'mock' && (
+                <p className="text-xs text-yellow-500 italic">
+                  ⚠️ This is a mock response — no real transaction will be created.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -358,6 +487,25 @@ function ConfigCard({
       >
         {value}
       </p>
+    </div>
+  );
+}
+
+function DataField({ label, value }: { label: string; value: string }) {
+  const truncated = value.length > 80 ? `${value.slice(0, 40)}...${value.slice(-20)}` : value;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-[#52525b] shrink-0 w-20">{label}:</span>
+      <code className="text-xs text-[#71717a] font-mono truncate bg-[#0a0a0a] px-2 py-1 rounded flex-1">
+        {truncated}
+      </code>
+      <button
+        onClick={() => navigator.clipboard.writeText(value)}
+        className="text-xs text-[#52525b] hover:text-white shrink-0 transition-colors"
+        title="Copy to clipboard"
+      >
+        📋
+      </button>
     </div>
   );
 }
