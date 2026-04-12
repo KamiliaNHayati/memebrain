@@ -7,6 +7,7 @@ import { isMockMode } from '@/lib/config';
 import { MOCK_DEFAULTS } from '@/lib/mock-data';
 import { TEST_TOKENS } from '@/lib/constants';
 import { analyzeToken } from '@/lib/risk-engine';
+import { generateRiskNarrative } from '@/lib/llm';
 
 export const maxDuration = 60; // Vercel timeout extension
 
@@ -43,6 +44,15 @@ export async function POST(request: NextRequest) {
     // ── Live Mode — Full 8-Rule Risk Engine ────────────────
     const result = await analyzeToken(address);
 
+    let aiExplanation = null;
+    if (result.score < 60 && process.env.BLINK_API_KEY) {
+      try {
+        aiExplanation = await generateRiskNarrative(result);
+      } catch (e) {
+        console.warn('[Risk] Narrative generation failed:', e);
+      }
+    }
+    
     return NextResponse.json({
       ...result,
       mode: 'live',

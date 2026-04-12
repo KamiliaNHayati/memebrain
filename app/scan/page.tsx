@@ -25,6 +25,7 @@ interface ScanResult {
     message: string;
   }>;
   summary: string;
+  aiExplanation?: string;
   tokenInfo: {
     name: string;
     symbol: string;
@@ -272,6 +273,18 @@ export default function ScanPage() {
                   &ldquo;{result.summary}&rdquo;
                 </p>
               </div>
+
+              {result.aiExplanation && (
+                <div className="mt-4 p-4 bg-red-950/50 border-l-4 border-red-500 rounded">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">🤖</span>
+                    <div>
+                      <h4 className="text-red-400 font-semibold mb-1">AI Security Analysis</h4>
+                      <p className="text-gray-200 leading-relaxed">{result.aiExplanation}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Mode + Timestamp */}
               <div className="flex items-center justify-between text-xs text-[#52525b]">

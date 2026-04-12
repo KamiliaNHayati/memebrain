@@ -85,8 +85,8 @@ export const AI_SUGGESTIONS: Array<TokenGenResult & { id: string }> = [
 
 // ── LLM API Client ───────────────────────────────────────────
 
-const BLINK_API_URL = process.env.BLINK_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
-const BLINK_MODEL = process.env.BLINK_MODEL || 'alibaba/qwen-3-32b';
+const BLINK_API_URL = 'https://core.blink.new/api/v1/ai/chat/completions';
+const BLINK_MODEL = 'alibaba/qwen-3-32b || openai/GPT-4o-mini || google/gemini-2.5-flash';
 
 const SYSTEM_PROMPT = `You are MemeBrain AI, an expert at creating meme token configurations for Four.meme on BNB Smart Chain.
 
@@ -147,7 +147,7 @@ export async function generateTokenFromPrompt(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: BLINK_MODEL,
+        model: 'alibaba/qwen-3-32b',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           {
@@ -189,6 +189,44 @@ export async function generateTokenFromPrompt(
   }
 }
 
+// ── Generate Risk Narrative ─────────────────────────────
+export async function generateRiskNarrative(riskResult: any): Promise<string> {
+  const criticalRules = riskResult.rules?.filter((r: any) => r.status === 'failed' && Math.abs(r.impact) >= 20) || [];
+  
+  const prompt = `Explain this Four.meme token risk in 2 sentences. Be direct and alarming if critical.
+  
+Score: ${riskResult.score}/100 (${riskResult.level})
+Failed critical checks: ${criticalRules.map((r: any) => r.name).join(', ')}
+
+Context: The April 3rd exploit involved setting recipientAddress to a contract that cannot receive WBNB, bricking sells.
+
+Rules:
+- If "Honeypot Recipient" failed: Mention "This is the exact April 3rd exploit pattern"
+- If "Extreme Fee" failed: Mention profitability impact
+- If "Zero Holder Rewards" failed: Mention creator greed
+
+Respond with just the explanation, no JSON.`;
+
+  const response = await fetch(BLINK_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.BLINK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash-lite', // Cheapest, fastest
+      messages: [
+        { role: 'system', content: 'You are a security alarm. Be concise and alarming.' },
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 200,
+    }),
+  });
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || 'Risk analysis complete. Review details carefully.';
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 
 /**
@@ -197,47 +235,47 @@ export async function generateTokenFromPrompt(
 function extractJSON(content: string): TokenGenResult {
   let text = content.trim();
 
-  // 1. Strip <think>...</think> blocks (Qwen reasoning)
-  text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-
-  // 2. Remove markdown code fences (```json ... ``` or ``` ... ```)
-  const codeFenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeFenceMatch) {
-    text = codeFenceMatch[1].trim();
-  } else {
-    // Remove standalone fences
-    if (text.startsWith('```json')) text = text.slice(7);
-    else if (text.startsWith('```')) text = text.slice(3);
-    if (text.endsWith('```')) text = text.slice(0, -3);
-    text = text.trim();
+  // Try 1: Strip think blocks and parse what remains
+  const withoutThink = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  if (withoutThink.includes('{')) {
+    try {
+      return parseJSONFromText(withoutThink);
+    } catch { /* continue */ }
   }
 
-  // 3. Try direct parse
-  try {
-    return JSON.parse(text);
-  } catch {
-    // 4. Find the outermost JSON object using brace counting
-    const start = text.indexOf('{');
-    if (start !== -1) {
-      let depth = 0;
-      let end = -1;
-      for (let i = start; i < text.length; i++) {
-        if (text[i] === '{') depth++;
-        if (text[i] === '}') depth--;
-        if (depth === 0) { end = i; break; }
-      }
-      if (end !== -1) {
-        try {
-          return JSON.parse(text.slice(start, end + 1));
-        } catch (parseErr) {
-          console.error('[LLM] JSON parse failed. Extracted:', text.slice(start, Math.min(end + 1, start + 200)));
-          throw parseErr;
-        }
+  // Try 2: Maybe JSON is INSIDE the think block? (Qwen quirk)
+  const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/);
+  if (thinkMatch) {
+    try {
+      return parseJSONFromText(thinkMatch[1]);
+    } catch { /* continue */ }
+  }
+
+  // Try 3: Just brute force search for JSON object in entire text
+  return parseJSONFromText(text);
+}
+
+function parseJSONFromText(text: string): TokenGenResult {
+  // Remove markdown fences
+  text = text.replace(/```(?:json)?\s*([\s\S]*?)```/, '$1').trim();
+  
+  // Find outermost JSON object
+  const start = text.indexOf('{');
+  if (start === -1) throw new Error('No JSON start');
+  
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    if (text[i] === '}') depth--;
+    if (depth === 0) {
+      try {
+        return JSON.parse(text.slice(start, i + 1));
+      } catch {
+        throw new Error('Invalid JSON');
       }
     }
-    console.error('[LLM] No JSON object found in response:', text.slice(0, 300));
-    throw new Error('Could not extract JSON from LLM response');
   }
+  throw new Error('Unclosed JSON');
 }
 
 /**

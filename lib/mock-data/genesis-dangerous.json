@@ -1,0 +1,15 @@
+{
+    "name": "RiskyToken",
+    "symbol": "RISK",
+    "description": "A token with dangerous settings (demo only)",
+    "taxConfig": {
+      "feeRate": 10,
+      "rateFounder": 80,
+      "rateHolder": 0,
+      "rateBurn": 10,
+      "rateLiquidity": 10,
+      "feePlan": false
+    },
+    "imagePrompt": "test",
+    "tags": ["demo", "dangerous"]
+  }
