@@ -64,7 +64,8 @@ interface CreateRequest {
   walletAddress: string;
   imageUrl?: string;
   preSale?: string; // BNB amount for creator's pre-purchase (default "0")
-  label?: string;   // Token category (default best-guess from tags)
+  label?: string;   // Token category (default best-guess from tags)'
+  tradingPair?: 'BNB' | 'USDC';
 }
 
 /**
@@ -80,6 +81,34 @@ function inferLabel(tags?: string[]): string {
   if (lower.some((t) => t.includes('social'))) return 'Social';
   if (lower.some((t) => t.includes('charity'))) return 'Charity';
   return 'Meme';
+}
+
+// ── Helper: Get raisedToken config based on trading pair ─────
+function getRaisedToken(pair: 'BNB' | 'USDC' = 'BNB') {
+  if (pair === 'USDC') {
+    return {
+      symbol: 'USDC',
+      nativeSymbol: 'USDC',
+      symbolAddress: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', // USDC on BSC
+      deployCost: '0',
+      buyFee: '0.01',
+      sellFee: '0.01',
+      minTradeFee: '0',
+      b0Amount: '8',
+      totalBAmount: '24',
+      totalAmount: '1000000000',
+      logoUrl: 'https://static.four.meme/market/usdc-logo.png',
+      tradeLevel: ['0.1', '0.5', '1'],
+      status: 'PUBLISH',
+      buyTokenLink: 'https://pancakeswap.finance/swap',
+      reservedNumber: 10,
+      saleRate: '0.8',
+      networkCode: 'BSC',
+      platform: 'MEME',
+    };
+  }
+  // Default: BNB
+  return RAISED_TOKEN_BSC;
 }
 
 /**
@@ -122,7 +151,7 @@ function buildCreatePayload(req: CreateRequest) {
     onlyMPC: false,
     feePlan: taxConfig.feePlan,
     ...(tokenTaxInfo ? { tokenTaxInfo } : {}),
-    raisedToken: RAISED_TOKEN_BSC,
+    raisedToken: getRaisedToken(req.tradingPair)
   };
 }
 
@@ -158,11 +187,12 @@ export async function POST(request: NextRequest) {
         signature: '0x' + 'ff'.repeat(64) + '(mock_signature)',
         payload: buildCreatePayload(body),
         mode: 'mock',
+        tradingPair: body.tradingPair || 'BNB',  // ← ADD THIS
         instructions: {
           step: 'Sign the transaction in your wallet',
           contract: 'TokenManager2',
           method: 'createToken(bytes createArg, bytes sign)',
-          note: 'This is a mock response — no real transaction will be created.',
+          note: `Mock response for ${body.tradingPair || 'BNB'} pair — no real transaction.`,
         },
       });
     }

@@ -20,6 +20,9 @@ interface MonitorData {
   sniperRisk: 'safe' | 'caution' | 'danger';
   recommendation: string;
   lastUpdated: string;
+  funds?: string;      // BNB raised
+  maxFunds?: string;   // BNB target for graduation
+  graduated?: boolean; // Optional: if API provides it
 }
 
 // ── Main Component ───────────────────────────────────────────
@@ -168,6 +171,15 @@ export default function MonitorPage() {
           {/* Sniper Alert Banner */}
           {data.sniperAlert && <SniperAlertBanner />}
 
+          {/* ── Graduation Banner ─────────────────────── */}
+          <GraduationBanner data={data} />
+
+          {/* ── Auto-Dispatch Timer ────────────────────── */}
+          <AutoDispatchTimer 
+            accumulatedUSD={parseFloat(data.feeAccumulatedBNB) * 300} // Approximate BNB price
+            threshold={1000}
+          />
+
           {/* Fee Dispatch Progress */}
           <ProgressPanel data={data} />
 
@@ -234,6 +246,49 @@ export default function MonitorPage() {
 }
 
 // ── Sub-Components ───────────────────────────────────────────
+
+// ── NEW: Graduation Status Banner ────────────────────────
+function GraduationBanner({ data }: { data: MonitorData }) {
+  const funds = parseFloat(data.funds || '0');
+  const maxFunds = parseFloat(data.maxFunds || '24'); // Default Four.meme max
+  const isGraduated = data.graduated || funds >= maxFunds * 0.95;
+  
+  if (!isGraduated) return null;
+  
+  return (
+    <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-cyan-400 flex items-center gap-2">
+          🎓 Token Graduated
+        </h3>
+        <span className="text-xs text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded">
+          Live on PancakeSwap
+        </span>
+      </div>
+      
+      <p className="text-xs text-cyan-300/80">
+        This token has completed its bonding curve phase and is now trading on PancakeSwap. 
+        MemeBrain continues monitoring for post-graduation risks.
+      </p>
+      
+      <div className="flex gap-2 pt-1">
+        <a
+          href="https://pancakeswap.ai"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] border border-[#333] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#262626] transition-colors"
+        >
+          🥞 Trade on PancakeSwap AI →
+        </a>
+        <button
+          className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 px-3 py-1.5 text-xs font-medium text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+        >
+          📊 View Post-Grad Metrics
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function ProgressPanel({ data }: { data: MonitorData }) {
   const progress = data.progressPercent;
@@ -440,4 +495,98 @@ function formatBNB(value: string): string {
   if (num >= 1) return num.toFixed(3);
   if (num >= 0.001) return num.toFixed(4);
   return num.toFixed(6);
+}
+
+// ── Auto-Dispatch Countdown Timer ───────────────────
+
+function AutoDispatchTimer({ 
+  accumulatedUSD, 
+  threshold = 1000 
+}: { 
+  accumulatedUSD: number; 
+  threshold?: number;
+}) {
+  const [timeRemaining, setTimeRemaining] = useState('');
+  
+  useEffect(() => {
+    const calculateTimeRemaining = () => {
+      const now = new Date();
+      
+      // ✅ Correct: Get current time in UTC+8 (Asia/Singapore)
+      const utc8String = now.toLocaleString('en-US', { timeZone: 'Asia/Singapore' });
+      const utc8Now = new Date(utc8String);
+      
+      // Calculate next midnight UTC+8
+      const nextMidnight = new Date(utc8Now);
+      nextMidnight.setHours(0, 0, 0, 0);
+      nextMidnight.setDate(nextMidnight.getDate() + 1);
+      
+      const diff = nextMidnight.getTime() - utc8Now.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      return `${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+    };
+    
+    setTimeRemaining(calculateTimeRemaining());
+    const timer = setInterval(() => {
+      setTimeRemaining(calculateTimeRemaining());
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
+  
+  const progress = Math.min((accumulatedUSD / threshold) * 100, 100);
+  const isQualified = accumulatedUSD >= threshold;
+  
+  return (
+    <div className="rounded-xl border border-blue-500/30 bg-blue-950/20 p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-blue-400 flex items-center gap-2">
+          ⏰ Next Auto-Dispatch
+        </h3>
+        <span className="text-xs font-mono text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded">
+          {timeRemaining}
+        </span>
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-400">Accumulated Value</span>
+          <span className="text-white font-mono font-semibold">
+            ${accumulatedUSD.toFixed(2)} / ${threshold}
+          </span>
+        </div>
+        <div className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+          <div 
+            className={`h-full transition-all duration-1000 ${
+              isQualified ? 'bg-gradient-to-r from-[#22c55e] to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'
+            }`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-gray-400">
+            {isQualified ? (
+              <span className="text-[#22c55e] flex items-center gap-1">
+                ✅ Threshold reached — auto-distributes at midnight UTC+8
+              </span>
+            ) : (
+              `Need $${(threshold - accumulatedUSD).toFixed(2)} more to qualify`
+            )}
+          </span>
+          <span className="text-blue-400 font-mono">
+            {progress.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+      
+      <div className="pt-2 border-t border-blue-500/20">
+        <p className="text-[11px] text-blue-300/80">
+          📅 Distribution runs once daily at 00:00 UTC+8 for eligible tokens
+        </p>
+      </div>
+    </div>
+  );
 }

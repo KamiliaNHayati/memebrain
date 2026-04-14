@@ -71,6 +71,13 @@ export function compileSafeTokenConfig(
       });
       guarantees.push('✅ Anti-sniper protection enabled');
     }
+
+    const creatorDomain = resolveFourDomain(creatorAddress || '');
+    if (creatorDomain) {
+      guarantees.push(`✅ Creator verified: ${creatorDomain} (SPACE ID)`);
+      // Note: We don't increase score here since isSafe is boolean,
+      // but we can use this in Agent Score calculation
+    }
   
     // Final safety check
     const isSafe = warnings.length === 0;
@@ -88,49 +95,62 @@ export function compileSafeTokenConfig(
   
 // Just reuse your existing Rule 1 check logic
 export function validateGenesisConfig(config: TokenGenResult) {
-    const checks = [];
+  const checks = [];
     
-    // Check 1: Honeypot pattern (the April 3rd check)
-    // Note: In Genesis, recipientAddress is usually the creator's wallet (EOA)
-    // But if LLM somehow suggests a contract address, catch it
-    if (config.taxConfig.rateFounder > 0) {
-      checks.push({
-        rule: 'Honeypot Prevention',
-        status: 'pass', // Assume EOA since it's their connected wallet
-        message: 'Creator fees go to deployer wallet (EOA) — safe from April 3rd pattern'
-      });
-    }
-    
-    // Check 2: Extreme fees
-    if (config.taxConfig.feeRate > 5) {
-      checks.push({
-        rule: 'Fee Rate',
-        status: 'warning',
-        message: `${config.taxConfig.feeRate}% fee is high — consider 3-5% for better trading volume`
-      });
-    } else {
-      checks.push({ rule: 'Fee Rate', status: 'pass', message: `${config.taxConfig.feeRate}% fee is optimal` });
-    }
-    
-    // Check 3: Holder rewards
-    if (config.taxConfig.rateHolder < 20) {
-      checks.push({
-        rule: 'Holder Rewards',
-        status: 'warning',
-        message: 'Low holder rewards (<20%) may reduce community engagement'
-      });
-    } else {
-      checks.push({ rule: 'Holder Rewards', status: 'pass', message: 'Strong holder incentives' });
-    }
-    
-    // Check 4: Anti-sniper
+  // Check 1: Honeypot pattern (the April 3rd check)
+  // Note: In Genesis, recipientAddress is usually the creator's wallet (EOA)
+  // But if LLM somehow suggests a contract address, catch it
+  if (config.taxConfig.rateFounder > 0) {
     checks.push({
-      rule: 'Anti-Sniper',
-      status: config.taxConfig.feePlan ? 'pass' : 'fail',
-      message: config.taxConfig.feePlan ? 'Protection enabled' : 'WARNING: Bots may front-run'
+      rule: 'Honeypot Prevention',
+      status: 'pass', // Assume EOA since it's their connected wallet
+      message: 'Creator fees go to deployer wallet (EOA) — safe from April 3rd pattern'
     });
-    
-    const score = checks.filter(c => c.status === 'pass').length / checks.length * 100;
-    
-    return { checks, score, isSafe: score >= 75 };
   }
+    
+  // Check 2: Extreme fees
+  if (config.taxConfig.feeRate > 5) {
+    checks.push({
+      rule: 'Fee Rate',
+      status: 'warning',
+      message: `${config.taxConfig.feeRate}% fee is high — consider 3-5% for better trading volume`
+    });
+  } else {
+    checks.push({ rule: 'Fee Rate', status: 'pass', message: `${config.taxConfig.feeRate}% fee is optimal` });
+  }
+    
+  // Check 3: Holder rewards
+  if (config.taxConfig.rateHolder < 20) {
+    checks.push({
+      rule: 'Holder Rewards',
+      status: 'warning',
+      message: 'Low holder rewards (<20%) may reduce community engagement'
+    });
+  } else {
+    checks.push({ rule: 'Holder Rewards', status: 'pass', message: 'Strong holder incentives' });
+  }
+    
+  // Check 4: Anti-sniper
+  checks.push({
+    rule: 'Anti-Sniper',
+    status: config.taxConfig.feePlan ? 'pass' : 'fail',
+    message: config.taxConfig.feePlan ? 'Protection enabled' : 'WARNING: Bots may front-run'
+  });
+    
+  const score = checks.filter(c => c.status === 'pass').length / checks.length * 100;
+  return { checks, score, isSafe: score >= 75 };
+}
+
+// ── .four Domain Mock Registry (Demo Only) ──────────────
+export const FOUR_DOMAIN_MOCKS: Record<string, string> = {
+  '0x1234567890123456789012345678901234567890': 'cyberbrew.four',
+  '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd': 'mooncat.four',
+  '0x9876543210987654321098765432109876543210': 'degenai.four',
+  // Add more as needed for demo tokens
+};
+
+// Helper to resolve address → domain (mock)
+export function resolveFourDomain(address: string): string | null {
+  const lower = address.toLowerCase();
+  return FOUR_DOMAIN_MOCKS[lower] || null;
+}

@@ -19,6 +19,7 @@ const TERMINAL_SCRIPTS: Array<{ lines: string[]; delay: number }> = [
       '  Rule 3: feeRate = 3% ✅',
       '  Rule 4: feePlan = true (anti-sniper ON) ✅',
       '  Rule 5: divideRate = 40% — strong holder rewards ✅',
+      '  Safety Compiler: No corrections needed',
       '  Risk Score: 90/100 — LOW RISK 🟢',
       '',
     ],
@@ -29,11 +30,13 @@ const TERMINAL_SCRIPTS: Array<{ lines: string[]; delay: number }> = [
       '> ⚠ ALERT: Scanning 0xe9d1...ffff',
       '  Status: SUSPENDED by Four.meme',
       '  Rule 1: HONEYPOT DETECTED ❌ (-65 pts)',
+      '  recipientAddress has bytecode — contract detected',
+      '  Tax fees cannot be received. Sells will fail.',
       '  Rule 4: feePlan = false ❌ (-10 pts)',
       '  Risk Score: 25/100 — CRITICAL 🔴',
       '  → This is the April 3rd exploit pattern.',
       '  → Sells will revert. DO NOT BUY.',
-      '',
+      '', 
     ],
   },
   {
@@ -53,10 +56,12 @@ const TERMINAL_SCRIPTS: Array<{ lines: string[]; delay: number }> = [
       '> Genesis: Generating token config...',
       '  Concept: "AI-powered coffee token"',
       '  Name: CyberBrew | Symbol: $CYBREW',
-      '  Safety Compiler: ✅ All checks passed',
+      '  Safety Compiler: Auto-correcting config...',
+      '    • rateFounder: 35% → 30% (capped)',
+      '    • feePlan: false → true (enabled)',
       '  Anti-sniper: ENABLED',
       '  Holder rewards: 40% — optimal engagement',
-      '',
+      '  Agent Readiness: 88/100 ✅'
     ],
   },
   {
@@ -67,8 +72,10 @@ const TERMINAL_SCRIPTS: Array<{ lines: string[]; delay: number }> = [
       '  Rule 2: recipientRate = 55%, divideRate = 8% ⚠️',
       '  Rule 3: feeRate = 10% — EXTREME ❌ (-15 pts)',
       '  Rule 4: feePlan = false ❌ (-10 pts)',
+      '  Safety Compiler: Applied 2 corrections',
       '  Risk Score: 45/100 — HIGH RISK 🟠',
       '  → Predatory tax config detected.',
+      '',
       '',
     ],
   },
@@ -112,6 +119,16 @@ export default function Home() {
             Four.meme gave AI the hands.{' '}
             <span className="text-white font-semibold">We built the brain.</span>
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/30 px-3 py-1 text-[11px] font-medium text-[#22c55e]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+              Phase 2: Agent Deployment Ready
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 px-3 py-1 text-[11px] font-medium text-purple-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+              Phase 3: Agentic Mode Optimized
+            </span>
+          </div>
           <p className="text-sm text-[#52525b] max-w-md mx-auto">
             Autonomous AI that protects Four.meme traders from exploits in real-time.
             Scan tokens, create safely, monitor dividends.

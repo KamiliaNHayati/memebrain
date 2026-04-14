@@ -122,6 +122,22 @@ export function AuditTrail({ rules }: AuditTrailProps) {
       {sorted.map((rule) => (
         <RuleCard key={rule.id} rule={rule} />
       ))}
+      {/* ── NEW: WBNB Tax Model Info ─────────────────────────── */}
+      {rules.some(r => r.name.includes('Founder') || r.name.includes('recipient')) && (
+        <div className="mt-3 p-3 rounded-lg border border-blue-500/30 bg-blue-950/20">
+          <div className="flex items-start gap-2">
+            <span className="text-blue-400 text-sm">ℹ️</span>
+            <div className="text-xs text-blue-300">
+              <p className="font-semibold mb-1">Tax Model Upgrade Detected</p>
+              <p className="text-blue-400/80">
+                Tokens created after block 90507362 distribute creator fees in WBNB (upgraded model).
+                This ensures better compatibility and reliability.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
 }

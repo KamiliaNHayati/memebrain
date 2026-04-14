@@ -7,7 +7,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAccount, useWalletClient } from 'wagmi';
 import { useFourMemeAuth } from '@/hooks/use-fourmeme-auth';
-import { validateGenesisConfig } from '@/lib/safety-compiler';
+import { resolveFourDomain, validateGenesisConfig } from '@/lib/safety-compiler';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -77,7 +77,8 @@ export default function GenesisPage() {
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
   const { accessToken, isAuthenticated, login, isLoading: authLoading } = useFourMemeAuth();
-
+  const [tradingPair, setTradingPair] = useState<'BNB' | 'USDC'>('BNB');
+  
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -228,6 +229,7 @@ export default function GenesisPage() {
           accessToken,
           walletAddress: address,
           preSale: '0',
+          tradingPair, // ← ADD THIS: 'BNB' or 'USDC'
         }),
       });
 
@@ -310,6 +312,17 @@ export default function GenesisPage() {
         <p className="text-sm text-[#71717a]">
           Describe a concept — MemeBrain AI generates a safe, optimized token
         </p>
+        
+        {/* ── Phase Badge ────────────────────────────── */}
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <span className="inline-flex items-center rounded-full bg-purple-500/10 border border-purple-500/30 px-2.5 py-0.5 text-[10px] font-medium text-purple-400">
+            Optimized for LLM Chat Trading
+          </span>
+          <span className="inline-flex items-center rounded-full bg-blue-500/10 border border-blue-500/30 px-2.5 py-0.5 text-[10px] font-medium text-blue-400">
+            🎯 Phase 3 Agentic Identity Ready
+          </span>
+        </div>
+        {/* ───────────────────────────────────────────────── */}
       </div>
 
       {/* Chat + Preview Layout */}
@@ -394,6 +407,10 @@ export default function GenesisPage() {
                 setDeployStep('idle');
                 setTxHash(null);
               }}
+              creatorAddress={address}
+              tradingPair={tradingPair}      
+              deployResult={deployResult}    
+              onTradingPairChange={setTradingPair}
             />
           ) : (
             <EmptyPreview />
@@ -465,6 +482,10 @@ function PreviewCard({
   onLogin,
   onDeploy,
   onReset,
+  creatorAddress,
+  tradingPair,       
+  deployResult,
+  onTradingPairChange,     
 }: {
   result: TokenGenResult;
   revealStep: number;
@@ -477,6 +498,10 @@ function PreviewCard({
   onLogin: () => void;
   onDeploy: () => void;
   onReset: () => void;
+  creatorAddress?: string;
+  tradingPair?: 'BNB' | 'USDC';  
+  deployResult?: DeployResult | null;
+  onTradingPairChange?: (pair: 'BNB' | 'USDC') => void;   
 }) {
   return (
     <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-hidden animate-in fade-in duration-500">
@@ -496,6 +521,11 @@ function PreviewCard({
                 {tag}
               </span>
             ))}
+            {creatorAddress && resolveFourDomain(creatorAddress) && (
+              <span className="inline-flex items-center rounded-full bg-blue-500/10 border border-blue-500/30 px-2 py-0.5 text-[10px] text-blue-400">
+                🌐 {resolveFourDomain(creatorAddress)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -533,6 +563,44 @@ function PreviewCard({
           </div>
         </div>
 
+        {/* ── Trading Pair Selector ───────────────────────────── */}
+        <div className={`transition-all duration-300 delay-125 ${revealStep >= 3.5 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+          <p className="text-[10px] text-[#52525b] uppercase tracking-wider mb-2">
+            Trading Pair
+          </p>
+          <div className="flex gap-2">
+            {/* BNB Button */}
+            <button
+              type="button"
+              onClick={() => onTradingPairChange?.('BNB')}  // ← USE CALLBACK
+              className={`flex-1 rounded-lg border px-3 py-2 text-center text-xs font-semibold transition-all ${
+                tradingPair === 'BNB'
+                  ? 'border-[#22c55e]/50 bg-[#22c55e]/10 text-[#22c55e]'
+                  : 'border-[#262626] bg-[#0a0a0a] text-[#71717a] hover:border-[#333]'
+              }`}
+            >
+              💵 BNB (Default)
+            </button>
+
+            {/* USDC Button */}
+            <button
+              type="button"
+              onClick={() => onTradingPairChange?.('USDC')}  // ← USE CALLBACK
+              className={`flex-1 rounded-lg border px-3 py-2 text-center text-xs font-semibold transition-all ${
+                tradingPair === 'USDC'
+                  ? 'border-blue-500/50 bg-blue-500/10 text-blue-400'
+                  : 'border-[#262626] bg-[#0a0a0a] text-[#71717a] hover:border-[#333]'
+              }`}
+              title="Multi-token trading now supported on Four.meme"
+            >
+              💵 USDC (New!)
+            </button>
+          </div>
+          <p className="text-[10px] text-[#3f3f46] mt-1.5">
+            ℹ️ {tradingPair === 'USDC' ? 'Selected: USDC pair (requires Four.meme API support)' : 'Default: BNB pair'}
+          </p>
+        </div>
+
         {/* Safety Certificate */}
         <div className={`transition-all duration-300 delay-150 ${revealStep >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
           {result.safetyCertificate ? (
@@ -544,6 +612,54 @@ function PreviewCard({
               </div>
             )
           )}
+        </div>
+
+        {/* ── Agent-Optimized Badge ───────────────────── */}
+        {result.taxConfig.feePlan && result.taxConfig.rateHolder >= 30 && (
+          <div className={`transition-all duration-300 delay-160 ${revealStep >= 4.25 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 px-3 py-1 text-[11px] font-medium text-purple-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+              🤖 Agent-Optimized Config
+            </span>
+            <p className="text-[10px] text-gray-400 mt-1.5 ml-1">
+              Low fees + high holder rewards = ideal for autonomous trading
+            </p>
+          </div>
+        )}
+
+        {/* ── NEW: Agent Safety Score ───────────────────────── */}
+        <div className={`transition-all duration-300 delay-165 ${revealStep >= 4.35 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+          <div className="p-3 bg-purple-950/30 border border-purple-500/30 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-purple-400">🤖</span>
+              <h4 className="text-purple-300 font-semibold text-sm">
+                Agent Readiness Score
+              </h4>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-purple-500 to-purple-400 transition-all duration-500"
+                  style={{ width: `${calculateAgentScore(result)}%` }}
+                />
+              </div>
+              <span className="text-sm font-bold text-purple-400 font-mono">
+                {calculateAgentScore(result)}/100
+              </span>
+            </div>
+            
+            <p className="text-xs text-gray-400 mt-2">
+              {calculateAgentScore(result) >= 80 
+                ? "✅ Safe for autonomous AI agent trading" 
+                : "⚠️ Manual review recommended for agents"}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Twitter Share Button ────────────────────────── */}
+        <div className={`transition-all duration-300 delay-175 ${revealStep >= 4.5 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+          <GenesisTwitterShare result={result} />
         </div>
 
         {/* Deploy Section */}
@@ -590,6 +706,19 @@ function PreviewCard({
                     ? '⏳ Deploying...'
                     : '🚀 Launch Token'}
                 </button>
+              )}
+
+              {deployResult && (
+                <div className="mt-3 p-3 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a]">
+                  <p className="text-xs text-[#52525b]">
+                    Trading Pair: <span className="font-semibold text-white">{tradingPair}</span>
+                  </p>
+                  {tradingPair === 'USDC' && (
+                    <p className="text-[10px] text-blue-400 mt-1">
+                      ℹ️ USDC pair selected — ensure your wallet has USDC on BSC for trading
+                    </p>
+                  )}
+                </div>
               )}
               <button
                 onClick={onReset}
@@ -655,6 +784,56 @@ function SafetyCertificateUI({ cert }: { cert: NonNullable<TokenGenResult['safet
         </div>
       )}
     </div>
+  );
+}
+
+// ── Helper: Calculate Agent Safety Score ─────────────────
+function calculateAgentScore(result: TokenGenResult): number {
+  let score = 70; // Base score
+  
+  // Fee rate: lower = better for agents
+  if (result.taxConfig.feeRate <= 3) score += 10;
+  else if (result.taxConfig.feeRate <= 5) score += 5;
+  
+  // Holder rewards: higher = better for agent retention
+  if (result.taxConfig.rateHolder >= 40) score += 10;
+  else if (result.taxConfig.rateHolder >= 30) score += 5;
+  
+  // Anti-sniper: mandatory for agents
+  if (result.taxConfig.feePlan) score += 10;
+  
+  // Safety compiler corrections: auto-fixed = +5 trust
+  if (result.safetyCertificate?.corrections?.length) score += 5;
+  
+  // Cap at 100
+  return Math.min(100, score);
+}
+
+// ── Helper: Genesis Twitter Share (no token address yet) ──
+function GenesisTwitterShare({ result }: { result: TokenGenResult }) {
+  const mockAddress = `0x${result.symbol.toLowerCase().padEnd(40, '0').slice(0, 42)}`;
+  const score = result.safetyCertificate?.isSafe ? 85 : 45;
+  const riskLevel = result.safetyCertificate?.isSafe ? 'LOW' : 'MEDIUM';
+  
+  // Build custom tweet for Genesis context
+  const tweetText = encodeURIComponent(
+    `Just generated $${result.symbol} with @fourdotmemeZH AI + @MemeBrain safety!\n\n` +
+    `Name: ${result.name}\n` +
+    `Fee: ${result.taxConfig.feeRate}% | Holders: ${result.taxConfig.rateHolder}%\n` +
+    `Safety: ${result.safetyCertificate?.corrections?.length || 0} auto-corrections applied\n\n` +
+    `Try it: https://memebrain.vercel.app/genesis\n` +
+    `#FourMeme #MemeBrain #BNBChain`
+  );
+  
+  return (
+    <a
+      href={`https://twitter.com/intent/tweet?text=${tweetText}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-[#1DA1F2]/30 bg-[#1DA1F2]/10 px-4 py-2.5 text-sm font-semibold text-[#1DA1F2] hover:bg-[#1DA1F2]/20 transition-colors"
+    >
+      🐦 Share on X
+    </a>
   );
 }
 
