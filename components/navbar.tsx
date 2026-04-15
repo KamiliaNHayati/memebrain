@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useFourMemeAuth } from '@/hooks/use-fourmeme-auth';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home', icon: '🧠' },
@@ -25,7 +26,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <span className="text-2xl">🧠</span>
+          <Image src="/logo.svg" alt="MemeBrain" width={28} height={28} />
           <span className="text-lg font-bold text-white group-hover:text-[#22c55e] transition-colors">
             MemeBrain
           </span>

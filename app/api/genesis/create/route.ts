@@ -94,8 +94,10 @@ function getRaisedToken(pair: 'BNB' | 'USDC' = 'BNB') {
       buyFee: '0.01',
       sellFee: '0.01',
       minTradeFee: '0',
-      b0Amount: '8',
-      totalBAmount: '24',
+      // ⚠️ ADJUSTED FOR USDC (6 decimals, ~$1 price)
+      // Target: ~$15,000-20,000 USDC (similar to 24 BNB value)
+      b0Amount: '8000',        // 8,000 USDC initial (~$8,000)
+      totalBAmount: '18000',   // 18,000 USDC total (~$18,000)
       totalAmount: '1000000000',
       logoUrl: 'https://static.four.meme/market/usdc-logo.png',
       tradeLevel: ['0.1', '0.5', '1'],
@@ -203,38 +205,84 @@ export async function POST(request: NextRequest) {
     console.log('[Genesis] Creating token:', payload.name, payload.shortName);
 
     // ── Call Four.meme API ──────────────────────────────────
-    const res = await fetch(`${FOURMEME_BASE}/v1/private/token/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'meme-web-access': accessToken,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('[Genesis] Four.meme create failed:', res.status, text);
+    let res: Response;
+    let json: any;
+    
+    try {
+      res = await fetch(`${FOURMEME_BASE}/v1/private/token/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'meme-web-access': accessToken,
+        },
+        body: JSON.stringify(payload),
+      });
+    
+      // Handle HTTP errors
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('[Genesis] Four.meme HTTP error:', res.status, text);
+        
+        // Special handling for USDC failures — USE body.tradingPair
+        if (body.tradingPair === 'USDC') {  // ← FIXED: body, not req
+          return NextResponse.json(
+            { 
+              error: 'USDC pair not supported yet',
+              suggestion: 'Try BNB pair instead',
+              details: text,
+            },
+            { status: 400 }
+          );
+        }
+        
+        return NextResponse.json(
+          { error: 'Four.meme token creation failed', details: text },
+          { status: res.status }
+        );
+      }
+    
+      json = await res.json();
+      
+    } catch (error) {
+      console.error('[Genesis] Four.meme API error:', error);
       return NextResponse.json(
-        { error: 'Four.meme token creation failed', details: text },
-        { status: res.status }
+        { 
+          error: 'Token creation failed',
+          details: error instanceof Error ? error.message : 'Unknown error',
+          // FIXED: body.tradingPair, not req.tradingPair
+          suggestion: body.tradingPair === 'USDC' ? 'Try BNB pair instead' : 'Check your connection',
+        },
+        { status: 500 }
       );
     }
-
-    const json = await res.json();
-
+    
+    // Check Four.meme business logic errors
     if (String(json.code) !== '0') {
+      // If USDC failed, provide helpful error — FIXED: body.tradingPair
+      if (body.tradingPair === 'USDC') {  // ← FIXED
+        return NextResponse.json(
+          {
+            error: 'USDC pair configuration failed',
+            details: json.msg || json.code,
+            suggestion: 'Four.meme may not support USDC yet. Try BNB pair.',
+          },
+          { status: 400 }
+        );
+      }
+      
       return NextResponse.json(
         { error: 'Four.meme creation error', details: json.msg || json.code },
         { status: 400 }
       );
     }
-
+    
     // ── Return createArg + signature + instructions ─────────
     return NextResponse.json({
       createArg: json.data.createArg,
       signature: json.data.signature,
       payload,
+      // FIXED: body.tradingPair, not req.tradingPair
+      tradingPair: body.tradingPair || 'BNB',  // ← FIXED
       mode: 'live',
       instructions: {
         step: 'Sign the on-chain transaction in your wallet',

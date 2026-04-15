@@ -235,6 +235,19 @@ export default function GenesisPage() {
 
       if (!res.ok) {
         const errData = await res.json();
+        
+        // Special handling for USDC errors with fallback suggestion
+        if (errData.suggestion?.includes('BNB')) {
+          setDeployError(
+            `USDC pair not supported yet. ${errData.details}\n\n` +
+            `💡 Try selecting BNB pair and deploying again.`
+          );
+          setDeployStep('idle');
+          addMessage('ai', `⚠️ USDC deployment failed: ${errData.details}. Try BNB pair instead.`);
+          return; // Exit early — don't throw
+        }
+        
+        // Generic error handling
         throw new Error(errData.details || errData.error || 'Four.meme API failed');
       }
 
@@ -661,6 +674,16 @@ function PreviewCard({
         <div className={`transition-all duration-300 delay-175 ${revealStep >= 4.5 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
           <GenesisTwitterShare result={result} />
         </div>
+
+        {/* ── USDC Warning ────────────────────────── */}
+        {tradingPair === 'USDC' && deployStep === 'idle' && (
+          <div className="p-3 rounded-lg bg-yellow-950/30 border border-yellow-500/30">
+            <p className="text-xs text-yellow-300">
+              ⚠️ <strong>Experimental:</strong> USDC pair support depends on Four.meme API. 
+              If deployment fails, try switching to BNB pair.
+            </p>
+          </div>
+        )}
 
         {/* Deploy Section */}
         <div className={`transition-all duration-300 delay-200 ${revealStep >= 5 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>

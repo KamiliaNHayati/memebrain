@@ -6,6 +6,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 
 // ── Simulated Terminal Logs ──────────────────────────────────
 
@@ -109,7 +110,7 @@ export default function Home() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#22c55e]/5 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative text-center space-y-5 max-w-2xl">
-          <div className="text-5xl sm:text-6xl mb-2">🧠</div>
+          <Image src="/logo.svg" alt="MemeBrain" width={80} height={80} />
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
             <span className="bg-gradient-to-r from-[#22c55e] via-[#10b981] to-[#06b6d4] bg-clip-text text-transparent">
               MemeBrain
