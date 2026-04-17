@@ -18,7 +18,22 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "MemeBrain — AI-Powered Four.meme Intelligence",
   description:
-    "Autonomous AI that protects Four.meme traders from exploits. Risk scanning, honeypot detection, and AI-powered token creation.",
+    "Autonomous AI that protects Four.meme traders from exploits. Risk scanning, honeypot detection, and AI-powered token creation on BNB Chain.",
+  keywords: ["Four.meme", "MemeBrain", "AI", "risk scanner", "honeypot detection", "BNB Chain", "meme token"],
+  openGraph: {
+    title: "MemeBrain — AI-Powered Four.meme Intelligence",
+    description: "Scan tokens for exploits, create safely with AI, and monitor dividends in real-time.",
+    siteName: "MemeBrain",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MemeBrain — AI-Powered Four.meme Intelligence",
+    description: "Autonomous AI that protects Four.meme traders from exploits.",
+    creator: "@MemeBrain",
+  },
+  robots: "index, follow",
 };
 
 export default function RootLayout({
@@ -32,10 +47,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#050505] text-[#fafafa] min-h-screen`}
       >
         <Providers>
+          {/* Skip to content — keyboard a11y */}
+          <a href="#main-content" className="skip-link">
+            Skip to content
+          </a>
           <Navbar />
-          <main>{children}</main>
+          <main id="main-content" className="pb-16 md:pb-0">
+            {children}
+          </main>
         </Providers>
       </body>
     </html>
   );
 }
+

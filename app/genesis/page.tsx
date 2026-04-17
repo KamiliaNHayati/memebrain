@@ -8,6 +8,9 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAccount, useWalletClient } from 'wagmi';
 import { useFourMemeAuth } from '@/hooks/use-fourmeme-auth';
 import { resolveFourDomain, validateGenesisConfig } from '@/lib/safety-compiler';
+import { GenesisSkeleton } from '@/components/genesis-skeleton';
+import { ErrorCard } from '@/components/error-card';
+import { useToast } from '@/components/toast';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -77,6 +80,7 @@ export default function GenesisPage() {
   const { address, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
   const { accessToken, isAuthenticated, login, isLoading: authLoading } = useFourMemeAuth();
+  const toast = useToast();
   const [tradingPair, setTradingPair] = useState<'BNB' | 'USDC'>('BNB');
   
   // Chat state
@@ -171,6 +175,8 @@ export default function GenesisPage() {
         const sourceLabel =
           data.source === 'llm' ? 'AI generated' : data.source === 'fallback' ? 'pre-generated (API unavailable)' : 'ready';
 
+        toast.success(`Token config generated — ${data.name} ($${data.symbol})`);
+
         addMessage(
           'ai',
           `Here's your token: **${data.name}** ($${data.symbol}) — ${sourceLabel}. ${
@@ -182,12 +188,13 @@ export default function GenesisPage() {
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Generation failed';
         setError(msg);
+        toast.error('Generation failed — see chat for details');
         addMessage('ai', `Sorry, something went wrong: ${msg}. Try again?`);
       } finally {
         setLoading(false);
       }
     },
-    []
+    [toast]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -261,6 +268,7 @@ export default function GenesisPage() {
       if (data.mode === 'mock') {
         // Mock mode — simulate success
         setDeployStep('done');
+        toast.success('Mock deploy complete!');
         addMessage('ai', '✅ Mock deploy complete! In live mode, this would create the token on BSC.');
         return;
       }
@@ -293,10 +301,12 @@ export default function GenesisPage() {
 
       setTxHash(hash);
       setDeployStep('confirming');
+      toast.info('Transaction submitted — waiting for confirmation');
       addMessage('ai', `⏳ Transaction submitted! Hash: ${hash.slice(0, 10)}...`);
 
       // Wait for confirmation (simplified — in production use waitForTransactionReceipt)
       setDeployStep('done');
+      toast.success('Token created on BSC!');
       addMessage('ai', `🎉 Token created! View on BSCScan: https://bscscan.com/tx/${hash}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Deploy failed';
@@ -316,7 +326,7 @@ export default function GenesisPage() {
   // ── Render ─────────────────────────────────────────────────
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
+    <div className="mx-auto max-w-4xl px-4 py-6 sm:py-10 animate-page-enter">
       {/* Header */}
       <div className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
@@ -330,9 +340,6 @@ export default function GenesisPage() {
         <div className="flex items-center justify-center gap-2 mt-3">
           <span className="inline-flex items-center rounded-full bg-purple-500/10 border border-purple-500/30 px-2.5 py-0.5 text-[10px] font-medium text-purple-400">
             Optimized for LLM Chat Trading
-          </span>
-          <span className="inline-flex items-center rounded-full bg-blue-500/10 border border-blue-500/30 px-2.5 py-0.5 text-[10px] font-medium text-blue-400">
-            🎯 Phase 3 Agentic Identity Ready
           </span>
         </div>
         {/* ───────────────────────────────────────────────── */}
@@ -360,25 +367,36 @@ export default function GenesisPage() {
           {!result && !loading && (
             <div className="mb-4">
               <p className="text-xs text-[#52525b] mb-2">Quick picks:</p>
-              <div className="flex flex-wrap gap-2">
-                {suggestions.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => selectSuggestion(s)}
-                    className="rounded-lg border border-[#262626] bg-[#111111] px-3 py-2 text-left hover:border-[#22c55e]/50 transition-all group"
-                  >
-                    <span className="text-sm font-semibold text-white group-hover:text-[#22c55e] transition-colors">
-                      {s.name}
-                    </span>
-                    <span className="text-xs text-[#52525b] ml-2">${s.symbol}</span>
-                  </button>
-                ))}
-              </div>
+              
+              {/* Empty state: no suggestions loaded */}
+              {suggestions.length === 0 ? (
+                <div className="text-center py-4 border border-dashed border-[#262626] rounded-lg">
+                  <div className="text-2xl mb-2 opacity-30">✨</div>
+                  <p className="text-xs text-[#71717a]">AI suggestions loading...</p>
+                  <p className="text-[10px] text-[#52525b] mt-1">Or describe your concept above</p>
+                </div>
+              ) : (
+                /* Existing suggestions grid */
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => selectSuggestion(s)}
+                      className="rounded-lg border border-[#262626] bg-[#111111] px-3 py-2 text-left hover:border-[#22c55e]/50 transition-all group"
+                    >
+                      <span className="text-sm font-semibold text-white group-hover:text-[#22c55e] transition-colors">
+                        {s.name}
+                      </span>
+                      <span className="text-xs text-[#52525b] ml-2">${s.symbol}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {/* Input */}
-          <form onSubmit={handleSubmit} className="flex gap-2">
+          <form onSubmit={handleSubmit} className="flex gap-2" aria-label="Token concept input">
             <input
               id="chat-input"
               type="text"
@@ -388,6 +406,7 @@ export default function GenesisPage() {
               className="flex-1 rounded-lg border border-[#262626] bg-[#111111] px-4 py-3 text-sm text-white placeholder:text-[#52525b] focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e]/30 transition-all"
               disabled={loading}
               maxLength={500}
+              aria-label="Describe your meme token concept"
             />
             <button
               type="submit"
@@ -401,7 +420,9 @@ export default function GenesisPage() {
 
         {/* ── Right: Live Preview Card ──────────────────────── */}
         <div className="lg:sticky lg:top-24 self-start">
-          {result ? (
+          {loading && !result ? (
+            <GenesisSkeleton />
+          ) : result ? (
             <PreviewCard
               result={result}
               revealStep={revealStep}
@@ -433,8 +454,8 @@ export default function GenesisPage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-950/30 p-4 text-sm text-red-300">
-          ❌ {error}
+        <div className="mt-4">
+          <ErrorCard error={error} />
         </div>
       )}
     </div>

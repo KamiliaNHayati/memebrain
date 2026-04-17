@@ -21,117 +21,191 @@ interface AuditTrailProps {
   rules: RiskRule[];
 }
 
-function getBorderColor(severity: string, passed: boolean): string {
-  if (passed) return 'border-l-emerald-500/50';
-  switch (severity) {
-    case 'critical': return 'border-l-red-500';
-    case 'high': return 'border-l-orange-500';
-    case 'medium': return 'border-l-yellow-500';
-    case 'low': return 'border-l-yellow-500/50';
-    default: return 'border-l-[#333]';
-  }
-}
+// ── Icons by Severity ──────────────────────────────────────
+const SEVERITY_ICONS = {
+  critical: '🚨',
+  high: '⚠️',
+  medium: '⚡',
+  low: 'ℹ️',
+  info: '💡',
+};
 
-function getImpactText(impact: number): string {
-  if (impact > 0) return `+${impact} pts`;
-  if (impact < 0) return `${impact} pts`;
-  return '—';
-}
+const SEVERITY_COLORS = {
+  critical: 'from-red-500 to-red-600',
+  high: 'from-orange-500 to-orange-600',
+  medium: 'from-yellow-500 to-yellow-600',
+  low: 'from-blue-500 to-blue-600',
+  info: 'from-gray-500 to-gray-600',
+};
 
-function getImpactColor(impact: number): string {
-  if (impact > 0) return 'text-emerald-400';
-  if (impact < 0) return 'text-red-400';
-  return 'text-[#52525b]';
-}
+const SEVERITY_BG = {
+  critical: 'bg-red-500/10 border-red-500/30',
+  high: 'bg-orange-500/10 border-orange-500/30',
+  medium: 'bg-yellow-500/10 border-yellow-500/30',
+  low: 'bg-blue-500/10 border-blue-500/30',
+  info: 'bg-gray-500/10 border-gray-500/30',
+};
 
-function shouldExpand(rule: RiskRule): boolean {
-  if (rule.severity === 'critical') return true;
-  if (rule.severity === 'high' && !rule.passed) return true;
-  return false;
-}
-
+// ── Rule Card Component ────────────────────────────────────
 function RuleCard({ rule }: { rule: RiskRule }) {
-  const [expanded, setExpanded] = useState(shouldExpand(rule));
+  const [expanded, setExpanded] = useState(rule.severity === 'critical' || (rule.severity === 'high' && !rule.passed));
 
   return (
-    <button
-      onClick={() => setExpanded(!expanded)}
-      className={`w-full text-left rounded-lg border border-[#262626] border-l-4 ${getBorderColor(
-        rule.severity,
-        rule.passed
-      )} bg-[#111111] transition-all hover:bg-[#161616] ${
-        !rule.passed && rule.severity === 'critical' ? 'ring-1 ring-red-500/20' : ''
-      }`}
+    <div
+      className={`rounded-xl border ${rule.passed ? 'border-emerald-500/20 bg-emerald-950/5' : SEVERITY_BG[rule.severity]} 
+        transition-all duration-300 hover:shadow-lg overflow-hidden`}
     >
-      {/* Header — always visible */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="text-base shrink-0">
-            {rule.passed ? '✅' : '❌'}
-          </span>
-          <div className="min-w-0">
-            <span className="text-sm font-medium text-white truncate block">
+      {/* Header — Clickable */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-5 py-4 flex items-center justify-between group"
+      >
+        <div className="flex items-center gap-4">
+          {/* Status Icon */}
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg
+            ${rule.passed 
+              ? 'bg-emerald-500/20 text-emerald-400' 
+              : `bg-gradient-to-br ${SEVERITY_COLORS[rule.severity]} text-white`
+            }`}
+          >
+            {rule.passed ? '✓' : SEVERITY_ICONS[rule.severity]}
+          </div>
+
+          {/* Info */}
+          <div className="text-left">
+            <h4 className={`font-semibold ${rule.passed ? 'text-emerald-400' : 'text-white'}`}>
               {rule.name}
-            </span>
-            <span className="text-xs text-[#52525b] capitalize">
-              {rule.severity}
-            </span>
+            </h4>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                ${rule.passed 
+                  ? 'bg-emerald-500/10 text-emerald-400' 
+                  : `bg-gradient-to-r ${SEVERITY_COLORS[rule.severity]} text-white`
+                }`}
+              >
+                {rule.severity}
+              </span>
+              {rule.scoreImpact !== 0 && (
+                <span className={`text-xs font-mono font-semibold
+                  ${rule.scoreImpact > 0 ? 'text-emerald-400' : 'text-red-400'}`}
+                >
+                  {rule.scoreImpact > 0 ? '+' : ''}{rule.scoreImpact} pts
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <span className={`text-sm font-mono font-semibold ${getImpactColor(rule.scoreImpact)}`}>
-            {getImpactText(rule.scoreImpact)}
-          </span>
-          <span className="text-[#52525b] text-xs">
-            {expanded ? '▾' : '▸'}
-          </span>
+        {/* Expand Arrow */}
+        <div className={`transform transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}>
+          <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </div>
-      </div>
+      </button>
 
-      {/* Body — expandable */}
+      {/* Expanded Content */}
       {expanded && (
-        <div className="px-4 pb-3 pt-0">
-          <div className="border-t border-[#262626] pt-3">
+        <div className="px-5 pb-5">
+          <div className="ml-14 p-4 rounded-lg bg-[#0a0a0a] border border-[#1a1a1a]">
             <p className="text-sm text-[#a1a1aa] leading-relaxed">
               {rule.message}
             </p>
+            
+            {/* Additional context for failed rules */}
+            {!rule.passed && rule.severity === 'critical' && (
+              <div className="mt-3 p-3 rounded-lg bg-red-950/30 border border-red-500/30">
+                <p className="text-xs text-red-400 font-medium">
+                  ⚠️ This is a critical security issue. Review carefully before trading.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
+// ── Main Audit Trail Component ─────────────────────────────
 export function AuditTrail({ rules }: AuditTrailProps) {
-  // Sort: critical first, then high, then rest
-  const sorted = [...rules].sort((a, b) => {
-    const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
-    // Failed rules first within same severity
-    if (a.severity === b.severity) {
-      return (a.passed ? 1 : 0) - (b.passed ? 1 : 0);
-    }
-    return order[a.severity] - order[b.severity];
+  // Group rules by severity
+  const grouped = rules.reduce((acc, rule) => {
+    if (!acc[rule.severity]) acc[rule.severity] = [];
+    acc[rule.severity].push(rule);
+    return acc;
+  }, {} as Record<string, RiskRule[]>);
+
+  // Sort within groups: failed first
+  Object.keys(grouped).forEach(severity => {
+    grouped[severity].sort((a, b) => (a.passed ? 1 : 0) - (b.passed ? 1 : 0));
   });
 
+  const severityOrder = ['critical', 'high', 'medium', 'low', 'info'];
+  const totalRules = rules.length;
+  const passedRules = rules.filter(r => r.passed).length;
+  const passRate = Math.round((passedRules / totalRules) * 100);
+
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-[#71717a] uppercase tracking-wider mb-3">
-        Audit Trail
-      </h3>
-      {sorted.map((rule) => (
-        <RuleCard key={rule.id} rule={rule} />
-      ))}
-      {/* ── NEW: WBNB Tax Model Info ─────────────────────────── */}
+    <div className="space-y-6">
+      {/* Header with Stats */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-[#71717a] uppercase tracking-wider">
+          Audit Trail
+        </h3>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-gray-400">
+            {passedRules}/{totalRules} checks passed
+          </div>
+          <div className="w-20 h-2 rounded-full bg-gray-800 overflow-hidden">
+            <div 
+              className={`h-full rounded-full transition-all duration-1000 ${
+                passRate >= 80 ? 'bg-emerald-500' : passRate >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${passRate}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Rules by Severity */}
+      <div className="space-y-4">
+        {severityOrder.map(severity => {
+          const severityRules = grouped[severity] || [];
+          if (severityRules.length === 0) return null;
+
+          return (
+            <div key={severity} className="space-y-3">
+              {/* Section Header */}
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{SEVERITY_ICONS[severity as keyof typeof SEVERITY_ICONS]}</span>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  {severity} Priority
+                </h4>
+                <span className="text-xs text-gray-500">({severityRules.length})</span>
+              </div>
+
+              {/* Rules */}
+              <div className="space-y-2">
+                {severityRules.map((rule) => (
+                  <RuleCard key={rule.id} rule={rule} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* WBNB Tax Model Info */}
       {rules.some(r => r.name.includes('Founder') || r.name.includes('recipient')) && (
-        <div className="mt-3 p-3 rounded-lg border border-blue-500/30 bg-blue-950/20">
-          <div className="flex items-start gap-2">
-            <span className="text-blue-400 text-sm">ℹ️</span>
-            <div className="text-xs text-blue-300">
-              <p className="font-semibold mb-1">Tax Model Upgrade Detected</p>
-              <p className="text-blue-400/80">
+        <div className="mt-6 p-4 rounded-xl border border-blue-500/30 bg-blue-950/20">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">ℹ️</span>
+            <div className="text-sm">
+              <p className="font-semibold text-blue-400 mb-1">Tax Model Upgrade Detected</p>
+              <p className="text-blue-300/80 leading-relaxed">
                 Tokens created after block 90507362 distribute creator fees in WBNB (upgraded model).
-                This ensures better compatibility and reliability.
+                This ensures better compatibility and reliability across DeFi protocols.
               </p>
             </div>
           </div>
@@ -139,5 +213,4 @@ export function AuditTrail({ rules }: AuditTrailProps) {
       )}
     </div>
   );
-
 }

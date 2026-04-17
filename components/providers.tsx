@@ -8,6 +8,7 @@ import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
 import { useState, type ReactNode } from 'react';
+import { ToastProvider } from '@/components/toast';
 
 import '@rainbow-me/rainbowkit/styles.css';
 
@@ -25,7 +26,9 @@ export function Providers({ children }: { children: ReactNode }) {
             overlayBlur: 'small',
           })}
         >
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

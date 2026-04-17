@@ -192,20 +192,44 @@ export async function generateTokenFromPrompt(
 // ── Generate Risk Narrative ─────────────────────────────
 export async function generateRiskNarrative(riskResult: any): Promise<string> {
   const criticalRules = riskResult.rules?.filter((r: any) => r.status === 'failed' && Math.abs(r.impact) >= 20) || [];
+  const failedRules = riskResult.rules?.filter((r: any) => r.status === 'failed') || [];
   
-  const prompt = `Explain this Four.meme token risk in 2 sentences. Be direct and alarming if critical.
-  
-Score: ${riskResult.score}/100 (${riskResult.level})
-Failed critical checks: ${criticalRules.map((r: any) => r.name).join(', ')}
+  // Build dynamic context based on risk level
+  const riskContext = riskResult.score < 60 
+    ? "This is a HIGH-RISK token. Be direct and alarming about exploit potential."
+    : riskResult.score < 85
+    ? "This is a MEDIUM-RISK token. Highlight concerns but acknowledge safe aspects."
+    : "This is a LOW-RISK token. Still provide 2-3 sentences explaining WHY it's safe and what to monitor.";
 
-Context: The April 3rd exploit involved setting recipientAddress to a contract that cannot receive WBNB, bricking sells.
+  const prompt = `You are MemeBrain AI, a security analyst for Four.meme tokens.
 
-Rules:
-- If "Honeypot Recipient" failed: Mention "This is the exact April 3rd exploit pattern"
-- If "Extreme Fee" failed: Mention profitability impact
-- If "Zero Holder Rewards" failed: Mention creator greed
+Generate a 2-3 sentence risk summary. REQUIRED STRUCTURE:
+1. Sentence 1: Overall assessment + primary factor (score driver)
+2. Sentence 2: Specific technical observation (contract code, tax config, or bonding curve)
+3. Sentence 3: Trader impact + clear recommendation
 
-Respond with just the explanation, no JSON.`;
+Token Data:
+• Score: ${riskResult.score}/100 (${riskResult.level})
+• Failed checks: ${failedRules.length > 0 ? failedRules.map((r: any) => r.name).join(', ') : 'None'}
+• Critical issues: ${criticalRules.length > 0 ? criticalRules.map((r: any) => r.name).join(', ') : 'None'}
+
+${riskContext}
+
+Key Context: The April 3rd exploit bricked sells by setting recipientAddress to a contract without receive() function.
+
+RESPONSE RULES:
+• MUST be 2-3 complete sentences (40-80 words total)
+• NO JSON, NO markdown, NO bullet points
+• If LOW RISK: Explain WHAT makes it safe + WHAT to still watch
+• If HIGH RISK: Lead with the exploit pattern + immediate warning
+
+Example LOW RISK output:
+"This token scores 90/100 with no critical vulnerabilities detected. The recipientAddress is a verified EOA wallet and tax rates are within safe ranges. Traders can proceed with normal caution, monitoring bonding curve progress toward graduation."
+
+Example HIGH RISK output:
+"CRITICAL: This token matches the April 3rd honeypot pattern with recipientAddress set to a non-receiving contract. Sell transactions will revert, trapping buyer funds. DO NOT TRADE — this configuration bricks liquidity permanently."
+
+Now analyze the token above:`;
 
   const response = await fetch(BLINK_API_URL, {
     method: 'POST',
@@ -214,17 +238,44 @@ Respond with just the explanation, no JSON.`;
       'Authorization': `Bearer ${process.env.BLINK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash-lite', // Cheapest, fastest
+      model: 'google/gemini-2.5-flash-lite',
       messages: [
-        { role: 'system', content: 'You are a security alarm. Be concise and alarming.' },
+        { role: 'system', content: 'You are MemeBrain AI, a security analyst. Provide detailed 2-3 sentence risk assessments.' },
         { role: 'user', content: prompt }
       ],
-      max_tokens: 200,
+      max_tokens: 350, // Increased for 3 detailed sentences
+      temperature: 0.3, // Lower = more deterministic, less creative fluff
     }),
   });
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || 'Risk analysis complete. Review details carefully.';
+  let summary = data.choices?.[0]?.message?.content?.trim() || '';
+  
+  // Fallback: If response is too short (< 30 words), append structured context
+  if (summary.split(' ').length < 30) {
+    const fallback = generateFallbackSummary(riskResult);
+    summary = summary + ' ' + fallback;
+  }
+  
+  return summary || 'Risk analysis complete. Review the audit trail for detailed rule checks.';
+}
+
+// ── Fallback: Structured summary if LLM response is too short ─────────
+function generateFallbackSummary(riskResult: any): string {
+  const { score, level, rules } = riskResult;
+  
+  if (score >= 90) {
+    return `This token demonstrates strong security practices with a ${score}/100 safety score. Key positives include ${rules.filter((r: any) => r.passed).slice(0, 2).map((r: any) => r.name.toLowerCase()).join(' and ')}. Continue monitoring bonding curve progress as the token approaches graduation.`;
+  }
+  
+  if (score >= 60) {
+    const failed = rules.filter((r: any) => !r.passed).map((r: any) => r.name);
+    return `Moderate risk detected with score ${score}/100. Areas of concern: ${failed.join(', ') || 'tax configuration'}. Traders should review the full audit trail and consider position sizing before entry.`;
+  }
+  
+  // High risk fallback
+  const critical = rules.filter((r: any) => r.severity === 'critical' && !r.passed);
+  return `HIGH RISK: ${critical[0]?.message || 'Critical vulnerability detected'}. Immediate action recommended: avoid trading until configuration is reviewed by a security expert. This pattern has been associated with permanent fund loss in past exploits.`;
 }
 
 // ── Helpers ──────────────────────────────────────────────────

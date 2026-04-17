@@ -22,7 +22,7 @@ export function Navbar() {
   const { status, authenticate, isAuthenticated } = useFourMemeAuth();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#262626] bg-[#050505]/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-[#262626] bg-[#050505]/80 backdrop-blur-xl" role="banner">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
@@ -33,7 +33,7 @@ export function Navbar() {
         </Link>
 
         {/* Nav Links — Desktop */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -44,6 +44,7 @@ export function Navbar() {
                   ? 'text-[#22c55e] bg-[#22c55e]/10'
                   : 'text-[#71717a] hover:text-white hover:bg-[#1a1a1a]'
               )}
+              aria-current={pathname === link.href ? 'page' : undefined}
             >
               <span className="mr-1.5">{link.icon}</span>
               {link.label}
@@ -87,8 +88,8 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Nav */}
-      <nav className="flex md:hidden justify-around border-t border-[#262626] bg-[#050505]">
+      {/* Mobile Nav — Fixed bottom */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden justify-around border-t border-[#262626] bg-[#050505]/95 backdrop-blur-xl" aria-label="Mobile navigation">
         {NAV_LINKS.map((link) => (
           <Link
             key={link.href}
@@ -99,6 +100,7 @@ export function Navbar() {
                 ? 'text-[#22c55e]'
                 : 'text-[#71717a]'
             )}
+            aria-current={pathname === link.href ? 'page' : undefined}
           >
             <span className="text-lg">{link.icon}</span>
             {link.label}

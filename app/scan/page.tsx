@@ -11,6 +11,8 @@ import { AuditTrail } from '@/components/audit-trail';
 import { HoneypotBanner } from '@/components/honeypot-banner';
 import { TwitterShareButton } from '@/components/twitter-share-button';
 import { ScanSkeleton } from '@/components/scan-skeleton';
+import { ErrorCard } from '@/components/error-card';
+import { useToast } from '@/components/toast';
 
 interface ScanResult {
   tokenAddress: string;
@@ -46,6 +48,7 @@ interface ScanResult {
 
 export default function ScanPage() {
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [address, setAddress] = useState('');
   const [result, setResult] = useState<ScanResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,9 +85,27 @@ export default function ScanPage() {
 
       const data: ScanResult = await res.json();
       setResult(data);
+      toast.success(`Scan complete — ${data.riskLevel} risk (${data.score}/100)`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
-    } finally {
+      const msg = err instanceof Error ? err.message : 'Scan failed. Please try again.';
+      
+      // 🔁 Auto-retry for rate limits ONLY (simple, safe)
+      if (msg.toLowerCase().includes('rate limit') || msg.includes('429')) {
+        toast.warning('Rate limited — retrying in 15s...');
+        
+        // Simple timeout with cleanup
+        const retryTimer = setTimeout(() => {
+          handleScan(addr); // Re-run scan with same address
+        }, 15_000);
+        
+        // Cleanup timer if component unmounts or new scan starts
+        return () => clearTimeout(retryTimer);
+      }
+      
+      // Show error card for all other errors
+      setError(msg);
+      toast.error('Scan failed — see details below');
+    }finally {
       setLoading(false);
     }
   }, [address, mockParam]);
@@ -109,7 +130,7 @@ export default function ScanPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:py-12">
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:py-12 animate-page-enter">
       {/* Page Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
@@ -121,7 +142,7 @@ export default function ScanPage() {
       </div>
 
       {/* Search Bar */}
-      <form onSubmit={handleSubmit} className="mb-8">
+      <form onSubmit={handleSubmit} className="mb-8" role="search" aria-label="Token address search">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -132,6 +153,7 @@ export default function ScanPage() {
               placeholder="0x... Enter Four.meme token address"
               className="w-full rounded-lg border border-[#262626] bg-[#111111] px-4 py-3 text-sm text-white font-mono placeholder:text-[#52525b] focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e]/30 transition-all"
               disabled={loading}
+              aria-label="Token contract address"
             />
           </div>
           <button
@@ -177,8 +199,12 @@ export default function ScanPage() {
 
       {/* Error */}
       {error && (
-        <div className="mb-6 rounded-lg border border-red-500/30 bg-red-950/30 p-4 text-sm text-red-300">
-          ❌ {error}
+        <div className="mb-6">
+          <ErrorCard
+            error={error}
+            onRetry={() => handleScan()}
+            retryLabel="Retry Scan"
+          />
         </div>
       )}
 
@@ -278,9 +304,16 @@ export default function ScanPage() {
                 <div className="mt-4 p-4 bg-red-950/50 border-l-4 border-red-500 rounded">
                   <div className="flex items-start gap-3">
                     <span className="text-2xl">🤖</span>
-                    <div>
-                      <h4 className="text-red-400 font-semibold mb-1">AI Security Analysis</h4>
-                      <p className="text-gray-200 leading-relaxed">{result.aiExplanation}</p>
+                    <div className="rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-purple-400">🧠</span>
+                        <p className="text-xs text-[#71717a] mb-1 font-semibold uppercase tracking-wider">
+                          AI Security Analysis
+                        </p>
+                      </div>
+                      <p className="text-sm text-[#a1a1aa] leading-relaxed">
+                        {result.aiExplanation || result.summary || 'Analysis pending...'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -305,7 +338,7 @@ export default function ScanPage() {
 
       {/* Empty State */}
       {!result && !loading && !error && (
-        <div className="text-center py-16 text-[#52525b]">
+        <div className="text-center py-16 text-[#52525b] animate-page-enter">
           <div className="text-5xl mb-4">🔍</div>
           <p className="text-lg font-medium text-[#71717a]">
             Enter a token address to start scanning

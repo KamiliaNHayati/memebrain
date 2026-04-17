@@ -5,6 +5,9 @@
 // Auto-refreshes every 15 seconds.
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { MonitorSkeleton } from '@/components/monitor-skeleton';
+import { ErrorCard } from '@/components/error-card';
+import { useToast } from '@/components/toast';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -28,6 +31,7 @@ interface MonitorData {
 // ── Main Component ───────────────────────────────────────────
 
 export default function MonitorPage() {
+  const toast = useToast();
   const [address, setAddress] = useState('');
   const [data, setData] = useState<MonitorData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +39,7 @@ export default function MonitorPage() {
   const [isWatching, setIsWatching] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const prevSniperAlert = useRef(false);
 
   // ── Fetch Data ─────────────────────────────────────────────
 
@@ -55,14 +60,24 @@ export default function MonitorPage() {
         const result: MonitorData = await res.json();
         setData(result);
         setRefreshCount((c) => c + 1);
+
+        // Toast on sniper alert transition
+        if (result.sniperAlert && !prevSniperAlert.current) {
+          toast.warning('Sniper alert triggered! Fee pool near dispatch.');
+        }
+        prevSniperAlert.current = result.sniperAlert;
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Polling failed');
-        if (!silent) setData(null);
+        const msg = err instanceof Error ? err.message : 'Polling failed';
+        setError(msg);
+        if (!silent) {
+          setData(null);
+          toast.error('Monitor failed — ' + msg);
+        }
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    []
+    [toast]
   );
 
   // ── Auto-Refresh (15s) ────────────────────────────────────
@@ -85,6 +100,7 @@ export default function MonitorPage() {
     setIsWatching(true);
     setRefreshCount(0);
     fetchMonitor(address);
+    toast.success('Monitoring started — auto-refreshing every 15s');
   };
 
   const stopWatching = () => {
@@ -102,7 +118,7 @@ export default function MonitorPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12 animate-page-enter">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
@@ -114,7 +130,7 @@ export default function MonitorPage() {
       </div>
 
       {/* Address Input */}
-      <form onSubmit={handleSubmit} className="mb-4">
+      <form onSubmit={handleSubmit} className="mb-4" role="search" aria-label="Token address monitor">
         <div className="flex gap-2">
           <input
             id="monitor-address"
@@ -124,6 +140,7 @@ export default function MonitorPage() {
             placeholder="Enter TaxToken contract address..."
             className="flex-1 rounded-lg border border-[#262626] bg-[#111111] px-4 py-3 text-sm text-white font-mono placeholder:text-[#52525b] focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e]/30 transition-all"
             disabled={loading}
+            aria-label="TaxToken contract address"
           />
           <button
             type="submit"
@@ -160,8 +177,12 @@ export default function MonitorPage() {
 
       {/* Error */}
       {error && (
-        <div className="mb-6 rounded-lg border border-red-500/30 bg-red-950/30 p-4 text-sm text-red-300">
-          ❌ {error}
+        <div className="mb-6">
+          <ErrorCard
+            error={error}
+            onRetry={() => fetchMonitor(address)}
+            retryLabel="Retry Monitor"
+          />
         </div>
       )}
 
@@ -236,10 +257,7 @@ export default function MonitorPage() {
 
       {/* Loading */}
       {loading && !data && (
-        <div className="text-center py-16">
-          <div className="text-4xl mb-4 animate-pulse">📡</div>
-          <p className="text-sm text-[#71717a]">Reading on-chain data...</p>
-        </div>
+        <MonitorSkeleton />
       )}
     </div>
   );

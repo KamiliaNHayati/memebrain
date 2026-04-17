@@ -45,16 +45,18 @@ export async function POST(request: NextRequest) {
     const result = await analyzeToken(address);
 
     let aiExplanation = null;
-    if (result.score < 60 && process.env.BLINK_API_KEY) {
+    if (process.env.BLINK_API_KEY) {
       try {
         aiExplanation = await generateRiskNarrative(result);
       } catch (e) {
         console.warn('[Risk] Narrative generation failed:', e);
+        aiExplanation = result.summary || 'Risk analysis complete. Review audit trail for details.';
       }
     }
     
     return NextResponse.json({
       ...result,
+      aiExplanation,
       mode: 'live',
     });
   } catch (error) {

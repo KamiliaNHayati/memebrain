@@ -105,47 +105,39 @@ export default function Home() {
   return (
     <div className="min-h-[calc(100vh-4rem)]">
       {/* Hero Section */}
-      <section className="relative flex flex-col items-center justify-center px-4 pt-16 pb-12 overflow-hidden">
+      <section className="relative flex flex-col items-center justify-center px-4 pt-16 pb-12 overflow-hidden" aria-label="Hero">
         {/* Background glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#22c55e]/5 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative text-center space-y-5 max-w-2xl">
-          <Image src="/logo.svg" alt="MemeBrain" width={80} height={80} />
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
+          <Image src="/logo.svg" alt="MemeBrain logo" width={80} height={80} className="mx-auto block animate-hero-cascade hero-stagger-1" />
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight animate-hero-cascade hero-stagger-2">
             <span className="bg-gradient-to-r from-[#22c55e] via-[#10b981] to-[#06b6d4] bg-clip-text text-transparent">
               MemeBrain
             </span>
           </h1>
-          <p className="text-lg sm:text-xl text-[#71717a] max-w-lg mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl text-[#71717a] max-w-lg mx-auto leading-relaxed animate-hero-cascade hero-stagger-3">
             Four.meme gave AI the hands.{' '}
             <span className="text-white font-semibold">We built the brain.</span>
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/30 px-3 py-1 text-[11px] font-medium text-[#22c55e]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
-              Phase 2: Agent Deployment Ready
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 px-3 py-1 text-[11px] font-medium text-purple-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-              Phase 3: Agentic Mode Optimized
-            </span>
-          </div>
-          <p className="text-sm text-[#52525b] max-w-md mx-auto">
+          <p className="text-sm text-[#52525b] max-w-md mx-auto animate-hero-cascade hero-stagger-4">
             Autonomous AI that protects Four.meme traders from exploits in real-time.
             Scan tokens, create safely, monitor dividends.
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3 animate-hero-cascade hero-stagger-5">
             <Link
               href="/scan"
               className="inline-flex items-center gap-2 rounded-lg bg-[#22c55e] px-7 py-3 text-sm font-semibold text-black hover:bg-[#16a34a] transition-all hover:shadow-[0_0_24px_rgba(34,197,94,0.3)]"
+              aria-label="Scan a token for risks"
             >
               🔍 Scan a Token
             </Link>
             <Link
               href="/genesis"
               className="inline-flex items-center gap-2 rounded-lg border border-[#262626] bg-[#111111] px-7 py-3 text-sm font-semibold text-white hover:bg-[#1a1a1a] hover:border-[#333] transition-colors"
+              aria-label="Create a token with AI"
             >
               ✨ Create with AI
             </Link>
@@ -154,12 +146,12 @@ export default function Home() {
       </section>
 
       {/* AI Brain Terminal */}
-      <section className="px-4 pb-10 max-w-3xl mx-auto">
+      <section className="px-4 pb-10 max-w-3xl mx-auto animate-page-enter" style={{ animationDelay: '0.5s' }} aria-label="AI Brain Terminal">
         <AITerminal />
       </section>
 
       {/* Stats + Recent Scans */}
-      <section className="px-4 pb-16 max-w-4xl mx-auto">
+      <section className="px-4 pb-16 max-w-4xl mx-auto animate-page-enter" style={{ animationDelay: '0.6s' }} aria-label="Platform statistics and recent scans">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
           {/* Live Stats */}
           <div>
@@ -167,10 +159,10 @@ export default function Home() {
               Platform Stats
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              {STATS.map((stat) => (
+              {STATS.map((stat, i) => (
                 <div
                   key={stat.label}
-                  className="rounded-xl border border-[#262626] bg-[#111111] p-4 hover:border-[#333] transition-colors"
+                  className={`rounded-xl border border-[#262626] bg-[#111111] p-4 hover:border-[#333] transition-colors animate-card-entrance stagger-${i + 1}`}
                 >
                   <div className="text-xl mb-1">{stat.icon}</div>
                   <p className="text-2xl font-bold font-mono text-white">{stat.value}</p>
@@ -206,7 +198,7 @@ export default function Home() {
       </section>
 
       {/* Feature Cards */}
-      <section className="px-4 pb-20 max-w-4xl mx-auto">
+      <section className="px-4 pb-20 max-w-4xl mx-auto animate-page-enter" style={{ animationDelay: '0.7s' }} aria-label="How MemeBrain works">
         <h2 className="text-xs font-semibold text-[#52525b] uppercase tracking-wider mb-3">
           How It Works
         </h2>
@@ -233,11 +225,11 @@ export default function Home() {
               href: '/monitor',
               color: 'group-hover:text-cyan-400',
             },
-          ].map((feature) => (
+          ].map((feature, i) => (
             <Link
               key={feature.title}
               href={feature.href}
-              className="group rounded-xl border border-[#262626] bg-[#111111] p-5 space-y-2.5 hover:border-[#333] hover:bg-[#111111]/80 transition-all"
+              className={`group rounded-xl border border-[#262626] bg-[#111111] p-5 space-y-2.5 hover:border-[#333] hover:bg-[#111111]/80 transition-all animate-card-entrance stagger-${i + 1}`}
             >
               <div className={`text-2xl transition-transform group-hover:scale-110`}>
                 {feature.icon}
@@ -336,7 +328,7 @@ function AITerminal() {
   }, [typeScript]);
 
   return (
-    <div className="rounded-xl border border-[#262626] bg-[#0a0a0a] overflow-hidden">
+    <div className="rounded-xl border border-[#262626] bg-[#0a0a0a] overflow-hidden" role="region" aria-label="Live AI scanning terminal">
       {/* Title bar */}
       <div className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] border-b border-[#1a1a1a]">
         <div className="flex gap-1.5">
