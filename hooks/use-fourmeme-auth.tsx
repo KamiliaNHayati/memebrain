@@ -1,37 +1,32 @@
 'use client';
 
 // hooks/use-fourmeme-auth.ts
-// Custom hook for Four.meme authentication flow:
-// 1. Connect wallet (via RainbowKit)
-// 2. Generate nonce via /api/auth/nonce proxy
-// 3. Sign message with wallet
-// 4. Exchange signature for access_token via /api/auth/login proxy
-// 5. Store access_token in state (session-based)
+// Four.meme authentication — shared via React Context so Navbar + Genesis
+// (and any other consumer) share the same auth state.
+//
+// Flow: Connect wallet → Generate nonce → Sign message → Exchange for access_token
 
-import { useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { buildSignMessage } from '@/lib/fourmeme';
 
 export type AuthStatus = 'disconnected' | 'connected' | 'signing' | 'authenticated' | 'error';
 
-interface UseFourMemeAuthReturn {
-  /** Current auth status */
+interface FourMemeAuthContextValue {
   status: AuthStatus;
-  /** Connected wallet address */
   address: string | undefined;
-  /** Four.meme access token (null if not authenticated) */
   accessToken: string | null;
-  /** Error message if auth failed */
   error: string | null;
-  /** Trigger the full auth flow (nonce → sign → login) */
   authenticate: () => Promise<void>;
-  /** Clear auth state */
   logout: () => void;
-  /** Whether the user is fully authenticated with Four.meme */
   isAuthenticated: boolean;
 }
 
-export function useFourMemeAuth(): UseFourMemeAuthReturn {
+const FourMemeAuthContext = createContext<FourMemeAuthContextValue | null>(null);
+
+// ── Provider (wrap once in Providers) ────────────────────────────
+
+export function FourMemeAuthProvider({ children }: { children: ReactNode }) {
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
@@ -99,7 +94,6 @@ export function useFourMemeAuth(): UseFourMemeAuthReturn {
       const message =
         err instanceof Error ? err.message : 'Authentication failed';
 
-      // Handle user rejection gracefully
       if (message.includes('rejected') || message.includes('denied') || message.includes('User rejected')) {
         setError('Signature rejected. Please try again.');
       } else {
@@ -122,13 +116,29 @@ export function useFourMemeAuth(): UseFourMemeAuthReturn {
     ? 'error'
     : status;
 
-  return {
-    status: currentStatus,
-    address,
-    accessToken,
-    error,
-    authenticate,
-    logout,
-    isAuthenticated: !!accessToken,
-  };
+  return (
+    <FourMemeAuthContext.Provider
+      value={{
+        status: currentStatus,
+        address,
+        accessToken,
+        error,
+        authenticate,
+        logout,
+        isAuthenticated: !!accessToken,
+      }}
+    >
+      {children}
+    </FourMemeAuthContext.Provider>
+  );
+}
+
+// ── Hook (consumers call this) ──────────────────────────────────
+
+export function useFourMemeAuth(): FourMemeAuthContextValue {
+  const context = useContext(FourMemeAuthContext);
+  if (!context) {
+    throw new Error('useFourMemeAuth must be used within <FourMemeAuthProvider>');
+  }
+  return context;
 }

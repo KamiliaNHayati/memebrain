@@ -1,7 +1,7 @@
 'use client';
 
 // components/providers.tsx
-// Global providers wrapping the entire app: Wagmi, RainbowKit, React Query.
+// Global providers wrapping the entire app: Wagmi, RainbowKit, React Query, Auth.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
@@ -9,6 +9,7 @@ import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
 import { useState, type ReactNode } from 'react';
 import { ToastProvider } from '@/components/toast';
+import { FourMemeAuthProvider } from '@/hooks/use-fourmeme-auth';
 
 import '@rainbow-me/rainbowkit/styles.css';
 
@@ -26,11 +27,14 @@ export function Providers({ children }: { children: ReactNode }) {
             overlayBlur: 'small',
           })}
         >
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <FourMemeAuthProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </FourMemeAuthProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
 }
+

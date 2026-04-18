@@ -310,7 +310,7 @@ function GraduationBanner({ data }: { data: MonitorData }) {
 
 function ProgressPanel({ data }: { data: MonitorData }) {
   const progress = data.progressPercent;
-  const { color, bgColor, pulseClass } = getProgressStyle(progress);
+  const { bgColor, pulseClass } = getProgressStyle(progress);
 
   return (
     <div className="rounded-xl border border-[#262626] bg-[#111111] p-6 space-y-4">

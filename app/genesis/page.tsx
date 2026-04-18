@@ -5,12 +5,13 @@
 // MetaMask signing (TokenManager2.createToken), and transaction status.
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useAccount, useWalletClient } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { useFourMemeAuth } from '@/hooks/use-fourmeme-auth';
-import { resolveFourDomain, validateGenesisConfig } from '@/lib/safety-compiler';
+import { resolveFourDomain } from '@/lib/safety-compiler';
 import { GenesisSkeleton } from '@/components/genesis-skeleton';
 import { ErrorCard } from '@/components/error-card';
 import { useToast } from '@/components/toast';
+import { useSendTransaction } from 'wagmi';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ interface TokenGenResult {
   safetyCertificate?: {
     isSafe: boolean;
     guarantees: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     corrections: Array<{ field: string; original: any; corrected: any }>;
     warnings: string[];
   };
@@ -46,6 +48,7 @@ interface Suggestion extends TokenGenResult {
 interface DeployResult {
   createArg: string;
   signature: string;
+  calldata: string;
   payload: Record<string, unknown>;
   mode: string;
   instructions: {
@@ -70,31 +73,29 @@ type DeployStep = 'idle' | 'creating' | 'signing' | 'confirming' | 'done' | 'err
 
 // TokenManager2 address (BSC Mainnet)
 const TOKEN_MANAGER_ADDRESS = '0x5c952063c7fc8610FFDB798152D69F0B9550762b';
-const TOKEN_MANAGER_ABI = [
-  'function createToken(bytes calldata createArg, bytes calldata sign) external payable',
-];
 
 // ── Main Component ───────────────────────────────────────────
 
 export default function GenesisPage() {
   const { address, isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient();
-  const { accessToken, isAuthenticated, login, isLoading: authLoading } = useFourMemeAuth();
+  const { accessToken, isAuthenticated, authenticate, status: authStatus } = useFourMemeAuth();
+  const authLoading = authStatus === 'signing';
   const toast = useToast();
   const [tradingPair, setTradingPair] = useState<'BNB' | 'USDC'>('BNB');
-  
-  // Chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'system',
-      content: "Hi! I'm MemeBrain AI. Describe a meme token concept and I'll generate a safe, optimized configuration — or pick one of my suggestions below.",
-      timestamp: Date.now(),
-    },
-  ]);
+  const { sendTransactionAsync } = useSendTransaction();
+
+  const INITIAL_MESSAGE: ChatMessage = {
+    role: 'system',
+    content: "Hi! I'm MemeBrain AI. Describe a meme token concept and I'll generate a safe, optimized configuration — or pick one of my suggestions below.",
+    timestamp: Date.now(),
+  };
+
+  // Chat state — restore from localStorage on mount
+  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [inputText, setInputText] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Token state
+  // Token state — restore from localStorage on mount
   const [result, setResult] = useState<TokenGenResult | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -108,6 +109,47 @@ export default function GenesisPage() {
   const [deployResult, setDeployResult] = useState<DeployResult | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
+
+  // ── Restore chat + result from localStorage on mount ──────
+  useEffect(() => {
+    try {
+      const savedMessages = localStorage.getItem('memebrain_genesis_chat');
+      const savedResult = localStorage.getItem('memebrain_genesis_result');
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+      if (savedResult) {
+        const parsed = JSON.parse(savedResult);
+        if (parsed && parsed.name) {
+          setResult(parsed);
+        }
+      }
+    } catch {
+      // Corrupted localStorage — ignore
+    }
+  }, []);
+
+  // ── Persist chat messages to localStorage ─────────────────
+  useEffect(() => {
+    // Only save if there's more than the initial system message
+    if (messages.length > 1) {
+      try {
+        localStorage.setItem('memebrain_genesis_chat', JSON.stringify(messages));
+      } catch { /* quota exceeded — ignore */ }
+    }
+  }, [messages]);
+
+  // ── Persist result to localStorage ────────────────────────
+  useEffect(() => {
+    if (result) {
+      try {
+        localStorage.setItem('memebrain_genesis_result', JSON.stringify(result));
+      } catch { /* quota exceeded — ignore */ }
+    }
+  }, [result]);
 
   // Load suggestions
   useEffect(() => {
@@ -216,9 +258,8 @@ export default function GenesisPage() {
   };
 
   // ── Deploy Flow ────────────────────────────────────────────
-
   const handleDeploy = useCallback(async () => {
-    if (!result || !accessToken || !address || !walletClient) return;
+    if (!result || !accessToken || !address) return; 
 
     setDeployStep('creating');
     setDeployError(null);
@@ -272,33 +313,13 @@ export default function GenesisPage() {
         addMessage('ai', '✅ Mock deploy complete! In live mode, this would create the token on BSC.');
         return;
       }
-
-      // Live mode: call TokenManager2.createToken via walletClient
-      const { encodeFunctionData, parseEther } = await import('viem');
-
-      const txData = encodeFunctionData({
-        abi: [
-          {
-            name: 'createToken',
-            type: 'function',
-            stateMutability: 'payable',
-            inputs: [
-              { name: 'createArg', type: 'bytes' },
-              { name: 'sign', type: 'bytes' },
-            ],
-            outputs: [],
-          },
-        ],
-        functionName: 'createToken',
-        args: [data.createArg as `0x${string}`, data.signature as `0x${string}`],
-      });
-
-      const hash = await walletClient.sendTransaction({
+      // Live mode: send pre-encoded calldata via wagmi
+      const hash = await sendTransactionAsync({
         to: TOKEN_MANAGER_ADDRESS as `0x${string}`,
-        data: txData,
-        value: parseEther('0.01'), // Creation fee
+        data: data.calldata as `0x${string}`,
+        value: BigInt('10000000000000000'),
       });
-
+      
       setTxHash(hash);
       setDeployStep('confirming');
       toast.info('Transaction submitted — waiting for confirmation');
@@ -321,7 +342,8 @@ export default function GenesisPage() {
         addMessage('ai', `❌ Deploy failed: ${msg}`);
       }
     }
-  }, [result, accessToken, address, walletClient]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, accessToken, address, sendTransactionAsync, toast]);
 
   // ── Render ─────────────────────────────────────────────────
 
@@ -335,14 +357,6 @@ export default function GenesisPage() {
         <p className="text-sm text-[#71717a]">
           Describe a concept — MemeBrain AI generates a safe, optimized token
         </p>
-        
-        {/* ── Phase Badge ────────────────────────────── */}
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <span className="inline-flex items-center rounded-full bg-purple-500/10 border border-purple-500/30 px-2.5 py-0.5 text-[10px] font-medium text-purple-400">
-            Optimized for LLM Chat Trading
-          </span>
-        </div>
-        {/* ───────────────────────────────────────────────── */}
       </div>
 
       {/* Chat + Preview Layout */}
@@ -432,7 +446,7 @@ export default function GenesisPage() {
               isConnected={isConnected}
               isAuthenticated={isAuthenticated}
               authLoading={authLoading}
-              onLogin={login}
+              onLogin={authenticate}
               onDeploy={handleDeploy}
               onReset={() => {
                 setResult(null);
@@ -440,6 +454,10 @@ export default function GenesisPage() {
                 setDeployError(null);
                 setDeployStep('idle');
                 setTxHash(null);
+                setMessages([INITIAL_MESSAGE]);
+                // Clear persisted state
+                localStorage.removeItem('memebrain_genesis_chat');
+                localStorage.removeItem('memebrain_genesis_result');
               }}
               creatorAddress={address}
               tradingPair={tradingPair}      
@@ -635,6 +653,18 @@ function PreviewCard({
           </p>
         </div>
 
+        {/* ── Image Generation Status ───────────────────────── */}
+        {deployStep === 'creating' && result.imagePrompt && (
+          <div className="p-3 rounded-lg bg-purple-950/30 border border-purple-500/30">
+            <div className="flex items-center gap-2">
+              <span className="animate-spin text-purple-400">🎨</span>
+              <p className="text-xs text-purple-300">
+                Generating logo with Recraft V2...
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Safety Certificate */}
         <div className={`transition-all duration-300 delay-150 ${revealStep >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
           {result.safetyCertificate ? (
@@ -722,15 +752,31 @@ function PreviewCard({
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
               {!isConnected ? (
-                <p className="text-xs text-[#52525b]">💡 Connect wallet to deploy</p>
+                <div className="w-full p-4 rounded-lg border border-[#262626] bg-[#0a0a0a] text-center">
+                  <div className="text-2xl mb-2">🔗</div>
+                  <p className="text-sm font-semibold text-white mb-1">Wallet Required</p>
+                  <p className="text-xs text-[#71717a] mb-3">
+                    Connect your wallet to deploy this token to BSC mainnet
+                  </p>
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/30 px-3 py-1.5 text-xs font-medium text-[#22c55e]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+                    Use the Connect Wallet button above
+                  </div>
+                </div>
               ) : !isAuthenticated ? (
-                <button
-                  onClick={onLogin}
-                  disabled={authLoading}
-                  className="flex-1 rounded-lg bg-[#22c55e] px-4 py-2.5 text-sm font-semibold text-black hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
-                >
-                  {authLoading ? '⏳ Signing in...' : '🔐 Sign in to Four.meme'}
-                </button>
+                <div className="w-full space-y-2">
+                  <button
+                    onClick={onLogin}
+                    disabled={authLoading}
+                    className="w-full rounded-lg bg-[#22c55e] px-4 py-2.5 text-sm font-semibold text-black hover:bg-[#16a34a] disabled:opacity-50 transition-colors"
+                    aria-label="Sign in to Four.meme to deploy"
+                  >
+                    {authLoading ? '⏳ Signing in...' : '🔐 Sign in to Four.meme'}
+                  </button>
+                  <p className="text-[10px] text-[#52525b] text-center">
+                    Required to call the Four.meme create token API
+                  </p>
+                </div>
               ) : deployStep === 'done' ? (
                 <a
                   href={txHash ? `https://bscscan.com/tx/${txHash}` : '#'}
@@ -855,9 +901,6 @@ function calculateAgentScore(result: TokenGenResult): number {
 
 // ── Helper: Genesis Twitter Share (no token address yet) ──
 function GenesisTwitterShare({ result }: { result: TokenGenResult }) {
-  const mockAddress = `0x${result.symbol.toLowerCase().padEnd(40, '0').slice(0, 42)}`;
-  const score = result.safetyCertificate?.isSafe ? 85 : 45;
-  const riskLevel = result.safetyCertificate?.isSafe ? 'LOW' : 'MEDIUM';
   
   // Build custom tweet for Genesis context
   const tweetText = encodeURIComponent(
@@ -881,7 +924,7 @@ function GenesisTwitterShare({ result }: { result: TokenGenResult }) {
   );
 }
 
-function DeployProgress({ step, txHash }: { step: DeployStep; txHash: string | null }) {
+function DeployProgress({ step }: { step: DeployStep; txHash: string | null }) {
   const steps: Array<{ label: string; key: DeployStep }> = [
     { label: 'API Call', key: 'creating' },
     { label: 'Sign TX', key: 'signing' },

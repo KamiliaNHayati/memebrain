@@ -4,7 +4,7 @@
 // Lightweight toast notification system — no external dependencies.
 // Usage: import { toast } from '@/components/toast'; toast.success('Done!');
 
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useCallback, createContext, useContext } from 'react';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 

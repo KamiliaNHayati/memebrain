@@ -4,6 +4,7 @@ import { TokenGenResult } from '@/lib/llm';
 export interface SafetyCertificate {
     isSafe: boolean;
     guarantees: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     corrections: Array<{ field: string; original: any; corrected: any }>;
     warnings: string[];
   }

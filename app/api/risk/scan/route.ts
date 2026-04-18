@@ -60,12 +60,17 @@ export async function POST(request: NextRequest) {
       mode: 'live',
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Detect rate limiting from upstream APIs
+    const isRateLimit = message.includes('429') || message.includes('rate limit') || message.includes('Too Many');
+    
     return NextResponse.json(
       {
-        error: 'Risk scan failed',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: isRateLimit ? 'Rate limited by Four.meme API' : 'Risk scan failed',
+        details: message,
       },
-      { status: 500 }
+      { status: isRateLimit ? 429 : 500 }
     );
   }
 }

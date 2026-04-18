@@ -2,6 +2,7 @@
 // LLM API client — converts text prompts into token configurations.
 // Primary: OpenAI-compatible API (Blink Pro / any OpenAI-compatible endpoint)
 // Fallback: Hardcoded pre-generated suggestions from mock-data/
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export interface TokenGenPrompt {
   concept: string;
@@ -86,7 +87,6 @@ export const AI_SUGGESTIONS: Array<TokenGenResult & { id: string }> = [
 // ── LLM API Client ───────────────────────────────────────────
 
 const BLINK_API_URL = 'https://core.blink.new/api/v1/ai/chat/completions';
-const BLINK_MODEL = 'alibaba/qwen-3-32b || openai/GPT-4o-mini || google/gemini-2.5-flash';
 
 const SYSTEM_PROMPT = `You are MemeBrain AI, an expert at creating meme token configurations for Four.meme on BNB Smart Chain.
 
@@ -189,7 +189,6 @@ export async function generateTokenFromPrompt(
   }
 }
 
-// ── Generate Risk Narrative ─────────────────────────────
 export async function generateRiskNarrative(riskResult: any): Promise<string> {
   const criticalRules = riskResult.rules?.filter((r: any) => r.status === 'failed' && Math.abs(r.impact) >= 20) || [];
   const failedRules = riskResult.rules?.filter((r: any) => r.status === 'failed') || [];
@@ -262,7 +261,7 @@ Now analyze the token above:`;
 
 // ── Fallback: Structured summary if LLM response is too short ─────────
 function generateFallbackSummary(riskResult: any): string {
-  const { score, level, rules } = riskResult;
+  const { score, rules } = riskResult;
   
   if (score >= 90) {
     return `This token demonstrates strong security practices with a ${score}/100 safety score. Key positives include ${rules.filter((r: any) => r.passed).slice(0, 2).map((r: any) => r.name.toLowerCase()).join(' and ')}. Continue monitoring bonding curve progress as the token approaches graduation.`;
@@ -284,7 +283,7 @@ function generateFallbackSummary(riskResult: any): string {
  * Extract JSON from LLM response, handling markdown code blocks.
  */
 function extractJSON(content: string): TokenGenResult {
-  let text = content.trim();
+  const text = content.trim();
 
   // Try 1: Strip think blocks and parse what remains
   const withoutThink = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();

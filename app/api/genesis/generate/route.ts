@@ -14,6 +14,7 @@ export const maxDuration = 60;
 /**
  * Transform genesisCyberbrew mock format → TokenGenResult format
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformMockToTokenGenResult(mock: any): TokenGenResult {
   return {
     name: mock.token?.name || mock.name,

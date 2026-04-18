@@ -4,9 +4,9 @@
 // THE HERO PAGE — Risk Scanner with address input, gauge, audit trail,
 // honeypot banner, and Twitter share buttons.
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { RiskScoreGauge, getRiskColor } from '@/components/risk-score-gauge';
+import { RiskScoreGauge } from '@/components/risk-score-gauge';
 import { AuditTrail } from '@/components/audit-trail';
 import { HoneypotBanner } from '@/components/honeypot-banner';
 import { TwitterShareButton } from '@/components/twitter-share-button';
@@ -46,7 +46,15 @@ interface ScanResult {
   mode: string;
 }
 
-export default function ScanPage() {
+export default function ScanPageWrapper() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-3xl px-4 py-12"><div className="animate-pulse text-center text-[#52525b]">Loading scanner...</div></div>}>
+      <ScanPageContent />
+    </Suspense>
+  );
+}
+
+function ScanPageContent() {
   const searchParams = useSearchParams();
   const toast = useToast();
   const [address, setAddress] = useState('');
@@ -108,7 +116,7 @@ export default function ScanPage() {
     }finally {
       setLoading(false);
     }
-  }, [address, mockParam]);
+  }, [address, mockParam, toast]);
 
   // Auto-scan if address is provided in URL
   useEffect(() => {

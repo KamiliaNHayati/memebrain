@@ -233,7 +233,7 @@ export function calculateScore(rules: RiskRule[]): number {
   return Math.max(0, BASE_SCORE + totalImpact);
 }
 
-function generateSummary(score: number, rules: RiskRule[], data: TokenData): string {
+function generateSummary(score: number, rules: RiskRule[]): string {
   const level = getRiskLevel(score);
   const failedCritical = rules.filter((r) => !r.passed && r.severity === 'critical');
   const failedHigh = rules.filter((r) => !r.passed && r.severity === 'high');
@@ -277,7 +277,6 @@ export async function fetchTokenData(tokenAddress: string): Promise<TokenData> {
   const maxFunds = totalBAmount;
 
   // Total sale amount and remaining offers
-  const totalAmount = parseFloat(String(apiData.totalAmount || '1000000000'));
   const saleAmount = parseFloat(String(apiData.saleAmount || '800000000'));
   const currentAmount = tokenPrice?.amount ? parseFloat(tokenPrice.amount) : saleAmount;
   const offersRemaining = saleAmount - (saleAmount - currentAmount);
@@ -425,7 +424,7 @@ export async function analyzeToken(tokenAddress: string): Promise<RiskResult> {
 
   const score = calculateScore(rules);
   const riskLevel = getRiskLevel(score);
-  const summary = generateSummary(score, rules, data);
+  const summary = generateSummary(score, rules);
 
   const progress = data.maxFunds > 0 ? data.funds / data.maxFunds : 0;
 

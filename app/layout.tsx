@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/navbar";
+import { ErrorBoundaryWrapper } from "@/components/error-boundary-wrapper";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -51,10 +52,12 @@ export default function RootLayout({
           <a href="#main-content" className="skip-link">
             Skip to content
           </a>
-          <Navbar />
-          <main id="main-content" className="pb-16 md:pb-0">
-            {children}
-          </main>
+          <ErrorBoundaryWrapper>
+            <Navbar />
+            <main id="main-content" className="pb-16 md:pb-0">
+              {children}
+            </main>
+          </ErrorBoundaryWrapper>
         </Providers>
       </body>
     </html>
