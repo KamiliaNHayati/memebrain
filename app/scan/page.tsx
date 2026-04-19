@@ -1,8 +1,6 @@
 'use client';
 
-// app/scan/page.tsx
-// THE HERO PAGE — Risk Scanner with address input, gauge, audit trail,
-// honeypot banner, and Twitter share buttons.
+// app/scan/page.tsx — Enhanced UI matching landing page aesthetic
 
 import { useState, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -48,7 +46,11 @@ interface ScanResult {
 
 export default function ScanPageWrapper() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-3xl px-4 py-12"><div className="animate-pulse text-center text-[#52525b]">Loading scanner...</div></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-xs font-mono text-[#3f3f46] animate-pulse">Initializing scanner...</div>
+      </div>
+    }>
       <ScanPageContent />
     </Suspense>
   );
@@ -62,14 +64,12 @@ function ScanPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check for mock mode from URL
   const mockParam = searchParams.get('mock') === 'true' ? '?mock=true' : '';
 
   const handleScan = useCallback(async (tokenAddress?: string) => {
     const addr = tokenAddress || address.trim();
     if (!addr) return;
 
-    // Basic validation
     if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) {
       setError('Invalid address format. Must be a 0x-prefixed 40-character hex string.');
       return;
@@ -96,29 +96,20 @@ function ScanPageContent() {
       toast.success(`Scan complete — ${data.riskLevel} risk (${data.score}/100)`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Scan failed. Please try again.';
-      
-      // 🔁 Auto-retry for rate limits ONLY (simple, safe)
+
       if (msg.toLowerCase().includes('rate limit') || msg.includes('429')) {
         toast.warning('Rate limited — retrying in 15s...');
-        
-        // Simple timeout with cleanup
-        const retryTimer = setTimeout(() => {
-          handleScan(addr); // Re-run scan with same address
-        }, 15_000);
-        
-        // Cleanup timer if component unmounts or new scan starts
+        const retryTimer = setTimeout(() => { handleScan(addr); }, 15_000);
         return () => clearTimeout(retryTimer);
       }
-      
-      // Show error card for all other errors
+
       setError(msg);
       toast.error('Scan failed — see details below');
-    }finally {
+    } finally {
       setLoading(false);
     }
   }, [address, mockParam, toast]);
 
-  // Auto-scan if address is provided in URL
   useEffect(() => {
     const urlAddress = searchParams.get('address');
     if (urlAddress) {
@@ -133,238 +124,254 @@ function ScanPageContent() {
     handleScan();
   };
 
-  const isHoneypot = result?.rules.some(
-    (r) => r.id === 'rule-1' && !r.passed
-  );
+  const isHoneypot = result?.rules.some((r) => r.id === 'rule-1' && !r.passed);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:py-12 animate-page-enter">
-      {/* Page Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-          🔍 Risk Scanner
-        </h1>
-        <p className="text-sm text-[#71717a]">
-          Paste any Four.meme token address to get an instant AI risk analysis
-        </p>
+    <div className="min-h-screen bg-black text-white">
+
+      {/* ── Page Header ──────────────────────────────────── */}
+      <div className="relative border-b border-[#141414] px-6 py-10 overflow-hidden">
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.025]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(34,197,94,1) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,1) 1px, transparent 1px)',
+            backgroundSize: '60px 60px',
+          }}
+        />
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ width: 500, height: 160, background: 'radial-gradient(ellipse, rgba(34,197,94,0.06) 0%, transparent 70%)' }}
+        />
+        <div className="relative max-w-3xl mx-auto text-center">
+          <p className="text-xs font-mono text-[#22c55e] uppercase tracking-[0.3em] mb-3">Risk Scanner</p>
+          <h1
+            className="font-black tracking-tight leading-[0.95] text-white mb-3"
+            style={{ fontSize: 'clamp(32px, 5vw, 52px)', letterSpacing: '-0.04em' }}
+          >
+            Scan before you trade.
+            <br />
+            <span style={{ color: '#3f3f46' }}>Know before you buy.</span>
+          </h1>
+          <p className="text-sm text-[#52525b] max-w-md mx-auto">
+            Paste any Four.meme token address for an instant 8-rule AI risk analysis.
+          </p>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <form onSubmit={handleSubmit} className="mb-8" role="search" aria-label="Token address search">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+      {/* ── Main Content ─────────────────────────────────── */}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+
+        {/* Search */}
+        <form onSubmit={handleSubmit} className="mb-8" role="search">
+          <div className="flex gap-2">
             <input
               id="token-address-input"
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="0x... Enter Four.meme token address"
-              className="w-full rounded-lg border border-[#262626] bg-[#111111] px-4 py-3 text-sm text-white font-mono placeholder:text-[#52525b] focus:outline-none focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e]/30 transition-all"
+              className="flex-1 rounded-full border border-[#1a1a1a] bg-[#0a0a0a] px-6 py-3.5 text-sm text-white font-mono placeholder:text-[#3f3f46] focus:outline-none focus:border-[#22c55e]/50 focus:ring-1 focus:ring-[#22c55e]/20 transition-all"
               disabled={loading}
               aria-label="Token contract address"
             />
+            <button
+              type="submit"
+              disabled={loading || !address.trim()}
+              className="shrink-0 rounded-full bg-[#22c55e] px-7 py-3.5 text-sm font-bold text-black hover:bg-[#16a34a] disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:shadow-[0_0_24px_rgba(34,197,94,0.3)]"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin inline-block">⏳</span> Scanning
+                </span>
+              ) : 'Scan →'}
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={loading || !address.trim()}
-            className="shrink-0 rounded-lg bg-[#22c55e] px-6 py-3 text-sm font-semibold text-black hover:bg-[#16a34a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="animate-spin">⏳</span> Scanning...
-              </span>
-            ) : (
-              'Scan'
-            )}
-          </button>
-        </div>
 
-        {/* Quick test tokens */}
-        <div className="flex flex-wrap gap-2 mt-3">
-          <span className="text-xs text-[#52525b]">Quick test:</span>
-          <button
-            type="button"
-            onClick={() => {
-              setAddress('0xe9d11f369df3cece5c9fbcf6354123f58dafffff');
-              handleScan('0xe9d11f369df3cece5c9fbcf6354123f58dafffff');
-            }}
-            className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 px-2 py-0.5 rounded transition-colors"
-          >
-            🔴 April 3rd Exploit
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setAddress('0xb8d5d82da44e7072e09bdd3c664422f3f320ffff');
-              handleScan('0xb8d5d82da44e7072e09bdd3c664422f3f320ffff');
-            }}
-            className="text-xs text-[#71717a] hover:text-white bg-[#1a1a1a] px-2 py-0.5 rounded transition-colors"
-          >
-            🟢 DOGI Token
-          </button>
-        </div>
-      </form>
+          {/* Quick test tokens */}
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <span className="text-[10px] text-[#3f3f46] uppercase tracking-[0.2em]">Quick test:</span>
+            <button
+              type="button"
+              onClick={() => { setAddress('0xe9d11f369df3cece5c9fbcf6354123f58dafffff'); handleScan('0xe9d11f369df3cece5c9fbcf6354123f58dafffff'); }}
+              className="rounded-full bg-red-500/10 border border-red-500/20 px-3 py-1 text-xs text-red-400 hover:bg-red-500/20 transition-all"
+            >
+              🔴 April 3rd Exploit
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAddress('0xb8d5d82da44e7072e09bdd3c664422f3f320ffff'); handleScan('0xb8d5d82da44e7072e09bdd3c664422f3f320ffff'); }}
+              className="rounded-full bg-[#141414] border border-[#1a1a1a] px-3 py-1 text-xs text-[#52525b] hover:text-white hover:border-[#262626] transition-all"
+            >
+              🟢 DOGI Token
+            </button>
+          </div>
+        </form>
 
-      {/* Error */}
-      {error && (
-        <div className="mb-6">
-          <ErrorCard
-            error={error}
-            onRetry={() => handleScan()}
-            retryLabel="Retry Scan"
-          />
-        </div>
-      )}
+        {/* Error */}
+        {error && (
+          <div className="mb-6">
+            <ErrorCard error={error} onRetry={() => handleScan()} retryLabel="Retry Scan" />
+          </div>
+        )}
 
-      {/* Loading */}
-      {loading && <ScanSkeleton />}
+        {/* Loading */}
+        {loading && <ScanSkeleton />}
 
-      {/* Results */}
-      {result && !loading && (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Honeypot Banner — above everything if triggered */}
-          {isHoneypot && (
-            <HoneypotBanner
-              message={result.rules.find((r) => r.id === 'rule-1')?.message || ''}
-              tokenAddress={result.tokenAddress}
-              score={result.score}
-              riskLevel={result.riskLevel}
-            />
-          )}
+        {/* Results */}
+        {result && !loading && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-          {/* Score + Token Info Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
-            {/* Left: Gauge */}
-            <div className="flex flex-col items-center gap-4 rounded-lg border border-[#262626] bg-[#111111] p-6">
-              <RiskScoreGauge score={result.score} riskLevel={result.riskLevel} />
-              <TwitterShareButton
+            {/* Honeypot Banner */}
+            {isHoneypot && (
+              <HoneypotBanner
+                message={result.rules.find((r) => r.id === 'rule-1')?.message || ''}
                 tokenAddress={result.tokenAddress}
                 score={result.score}
                 riskLevel={result.riskLevel}
-                isHoneypot={isHoneypot}
               />
-            </div>
+            )}
 
-            {/* Right: Token Info */}
-            <div className="rounded-lg border border-[#262626] bg-[#111111] p-5 space-y-4">
-              {/* Token Name Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-white">
-                    {result.tokenInfo.name}
-                    <span className="ml-2 text-[#71717a] text-sm font-normal">
-                      ${result.tokenInfo.symbol}
-                    </span>
-                  </h2>
-                  <p className="text-xs text-[#52525b] font-mono mt-0.5">
-                    {result.tokenAddress}
-                  </p>
+            {/* Score + Token Info */}
+            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-5">
+
+              {/* Left: Gauge */}
+              <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#141414] bg-[#050505] p-6">
+                <RiskScoreGauge score={result.score} riskLevel={result.riskLevel} />
+                <TwitterShareButton
+                  tokenAddress={result.tokenAddress}
+                  score={result.score}
+                  riskLevel={result.riskLevel}
+                  isHoneypot={isHoneypot}
+                />
+              </div>
+
+              {/* Right: Token Info */}
+              <div className="rounded-2xl border border-[#141414] bg-[#050505] p-5 space-y-4">
+
+                {/* Token header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-black text-white tracking-tight">
+                      {result.tokenInfo.name}
+                      <span className="ml-2 text-[#3f3f46] text-sm font-normal">${result.tokenInfo.symbol}</span>
+                    </h2>
+                    <p className="text-[11px] text-[#3f3f46] font-mono mt-1 break-all">
+                      {result.tokenAddress}
+                    </p>
+                  </div>
+                  <StatusBadge status={result.tokenInfo.status} />
                 </div>
-                {/* Status Badge */}
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    result.tokenInfo.status === 'SUSPENDED'
-                      ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30'
-                      : result.tokenInfo.status === 'PUBLISH'
-                      ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
-                      : 'bg-[#262626] text-[#71717a]'
-                  }`}
-                >
-                  {result.tokenInfo.status}
-                </span>
-              </div>
 
-              {/* Token Details Grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <InfoRow label="Type" value={result.tokenInfo.isTaxToken ? 'TaxToken' : 'Standard'} />
-                <InfoRow label="Fee Rate" value={result.tokenInfo.isTaxToken ? `${result.tokenInfo.feeRate}%` : 'N/A'} />
-                <InfoRow label="Recipient Rate" value={result.tokenInfo.recipientRate > 0 ? `${result.tokenInfo.recipientRate}%` : 'None'} />
-                <InfoRow label="Holder Dividends" value={result.tokenInfo.divideRate > 0 ? `${result.tokenInfo.divideRate}%` : 'None'} />
-                <InfoRow label="Liquidity" value={result.tokenInfo.liquidityRate > 0 ? `${result.tokenInfo.liquidityRate}%` : 'None'} />
-                <InfoRow label="Burn" value={result.tokenInfo.burnRate > 0 ? `${result.tokenInfo.burnRate}%` : 'None'} />
-              </div>
+                {/* Divider */}
+                <div className="h-px bg-[#141414]" />
 
-              {/* Bonding Curve Progress */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#71717a]">Bonding Curve</span>
-                  <span className="text-white font-mono">{result.tokenInfo.progress}%</span>
+                {/* Token details grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <InfoCell label="Type" value={result.tokenInfo.isTaxToken ? 'TaxToken' : 'Standard'} />
+                  <InfoCell label="Fee Rate" value={result.tokenInfo.isTaxToken ? `${result.tokenInfo.feeRate}%` : 'N/A'} />
+                  <InfoCell label="Recipient" value={result.tokenInfo.recipientRate > 0 ? `${result.tokenInfo.recipientRate}%` : 'None'} />
+                  <InfoCell label="Dividends" value={result.tokenInfo.divideRate > 0 ? `${result.tokenInfo.divideRate}%` : 'None'} highlight={result.tokenInfo.divideRate > 0} />
+                  <InfoCell label="Liquidity" value={result.tokenInfo.liquidityRate > 0 ? `${result.tokenInfo.liquidityRate}%` : 'None'} />
+                  <InfoCell label="Burn" value={result.tokenInfo.burnRate > 0 ? `${result.tokenInfo.burnRate}%` : 'None'} />
                 </div>
-                <div className="h-2 rounded-full bg-[#262626] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#22c55e] transition-all duration-1000"
-                    style={{ width: `${Math.min(100, result.tokenInfo.progress)}%` }}
-                  />
-                </div>
-              </div>
 
-              {/* AI Summary */}
-              <div className="rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] p-3">
-                <p className="text-xs text-[#71717a] mb-1 font-semibold uppercase tracking-wider">
-                  AI Analysis
-                </p>
-                <p className="text-sm text-[#a1a1aa] leading-relaxed italic">
-                  &ldquo;{result.summary}&rdquo;
-                </p>
-              </div>
-
-              {result.aiExplanation && (
-                <div className="mt-4 p-4 bg-red-950/50 border-l-4 border-red-500 rounded">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">🤖</span>
-                    <div className="rounded-lg bg-[#0a0a0a] border border-[#1a1a1a] p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-purple-400">🧠</span>
-                        <p className="text-xs text-[#71717a] mb-1 font-semibold uppercase tracking-wider">
-                          AI Security Analysis
-                        </p>
-                      </div>
-                      <p className="text-sm text-[#a1a1aa] leading-relaxed">
-                        {result.aiExplanation || result.summary || 'Analysis pending...'}
-                      </p>
-                    </div>
+                {/* Bonding Curve */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-[#3f3f46] uppercase tracking-[0.2em]">Bonding Curve</span>
+                    <span className="text-sm font-black font-mono text-white">{result.tokenInfo.progress}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-[#141414] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-1000"
+                      style={{
+                        width: `${Math.min(100, result.tokenInfo.progress)}%`,
+                        background: 'linear-gradient(90deg, #22c55e, #10b981)',
+                      }}
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Mode + Timestamp */}
-              <div className="flex items-center justify-between text-xs text-[#52525b]">
-                <span>
-                  Mode: <span className={result.mode === 'mock' ? 'text-yellow-500' : 'text-emerald-500'}>{result.mode}</span>
-                </span>
-                <span>
-                  {new Date(result.scannedAt).toLocaleString()}
-                </span>
+                {/* AI Summary */}
+                <div className="rounded-xl border border-[#141414] bg-[#0a0a0a] p-4">
+                  <p className="text-[10px] text-[#3f3f46] uppercase tracking-[0.2em] mb-2">AI Analysis</p>
+                  <p className="text-sm text-[#52525b] leading-relaxed italic">
+                    &ldquo;{result.summary}&rdquo;
+                  </p>
+                </div>
+
+                {/* AI Security Explanation */}
+                {result.aiExplanation && (
+                  <div className="rounded-xl border border-red-500/20 bg-red-950/10 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] text-red-400 uppercase tracking-[0.2em] font-bold">🧠 AI Security Analysis</span>
+                    </div>
+                    <p className="text-sm text-[#71717a] leading-relaxed">
+                      {result.aiExplanation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className="flex items-center justify-between text-[10px] text-[#262626]">
+                  <span>
+                    Mode:{' '}
+                    <span className={result.mode === 'mock' ? 'text-yellow-500/70' : 'text-[#22c55e]/70'}>
+                      {result.mode}
+                    </span>
+                  </span>
+                  <span>{new Date(result.scannedAt).toLocaleString()}</span>
+                </div>
               </div>
             </div>
+
+            {/* Audit Trail */}
+            <AuditTrail rules={result.rules} />
           </div>
+        )}
 
-          {/* Audit Trail */}
-          <AuditTrail rules={result.rules} />
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!result && !loading && !error && (
-        <div className="text-center py-16 text-[#52525b] animate-page-enter">
-          <div className="text-5xl mb-4">🔍</div>
-          <p className="text-lg font-medium text-[#71717a]">
-            Enter a token address to start scanning
-          </p>
-          <p className="text-sm mt-1">
-            Try the April 3rd exploit token to see the honeypot detector in action
-          </p>
-        </div>
-      )}
+        {/* Empty State */}
+        {!result && !loading && !error && (
+          <div className="text-center py-24">
+            <div
+              className="w-20 h-20 rounded-2xl border border-[#141414] bg-[#050505] flex items-center justify-center text-3xl mx-auto mb-6"
+              style={{ boxShadow: '0 0 40px rgba(34,197,94,0.05)' }}
+            >
+              🔍
+            </div>
+            <p className="text-base font-bold text-[#3f3f46] mb-2">
+              Enter a token address to begin
+            </p>
+            <p className="text-sm text-[#262626] max-w-sm mx-auto">
+              Try the April 3rd exploit token above to see the honeypot detector in action
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+// ── Sub-components ────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: string }) {
+  const config: Record<string, { bg: string; text: string; ring: string }> = {
+    SUSPENDED: { bg: 'bg-red-500/10', text: 'text-red-400', ring: 'ring-1 ring-red-500/20' },
+    PUBLISH:   { bg: 'bg-[#22c55e]/10', text: 'text-[#22c55e]', ring: 'ring-1 ring-[#22c55e]/20' },
+  };
+  const c = config[status] || { bg: 'bg-[#141414]', text: 'text-[#52525b]', ring: '' };
   return (
-    <div>
-      <span className="text-[#52525b] text-xs">{label}</span>
-      <p className="text-white font-mono text-sm">{value}</p>
+    <span className={`shrink-0 inline-flex items-center rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${c.bg} ${c.text} ${c.ring}`}>
+      {status}
+    </span>
+  );
+}
+
+function InfoCell({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-xl border p-3 ${highlight ? 'border-[#22c55e]/20 bg-[#22c55e]/5' : 'border-[#141414] bg-[#0a0a0a]'}`}>
+      <p className="text-[9px] text-[#3f3f46] uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-sm font-black font-mono ${highlight ? 'text-[#22c55e]' : 'text-white'}`}>{value}</p>
     </div>
   );
 }

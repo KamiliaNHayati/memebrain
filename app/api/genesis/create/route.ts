@@ -138,7 +138,7 @@ function buildCreatePayload(req: CreateRequest) {
 }
 
 function encodeCreateTokenCalldata(createArg: string, signature: string): string {
-  const selector = '5f9b105d'; // createToken(bytes,bytes)
+  const selector = 'df5a8b2e'; // createToken(bytes,bytes)
   
   function encodeBytes(hex: string): string {
     const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
@@ -149,7 +149,7 @@ function encodeCreateTokenCalldata(createArg: string, signature: string): string
   }
   
   const arg = createArg.startsWith('0x') ? createArg.slice(2) : createArg;
-  const sig = signature.startsWith('0x') ? signature.slice(2) : signature;
+  const sig = signature.startsWith('0x') ? signature.slice(2) : signature; // ← use the parameter
   
   const offset1 = '0000000000000000000000000000000000000000000000000000000000000040';
   const argEncoded = encodeBytes(arg);
@@ -323,6 +323,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       createArg: json.data.createArg,
       signature: json.data.signature,
+      tokenAddress: json.data.tokenAddress,
       calldata: encodeCreateTokenCalldata(json.data.createArg, json.data.signature),
       payload,
       tradingPair: body.tradingPair || 'BNB',

@@ -1,32 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['viem'],
-  webpack: (config, { isServer }) => {
+  experimental: {
+    // Tree-shake viem/wagmi properly instead of creating giant async chunks
+    optimizePackageImports: ['viem', 'wagmi', '@wagmi/core', '@wagmi/connectors'],
+  },
+  webpack: (config) => {
+    // Fix pino / WalletConnect / RainbowKit bundling errors in Next.js 14
     config.externals.push('pino-pretty', 'lokijs', 'encoding');
-    
+
+    // Fix MetaMask SDK trying to import React Native async-storage
     config.resolve.fallback = {
       ...config.resolve.fallback,
       '@react-native-async-storage/async-storage': false,
     };
-
-    // ← ADD THIS: prevent viem from being split into a separate async chunk
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          ...config.optimization.splitChunks,
-          cacheGroups: {
-            ...config.optimization.splitChunks?.cacheGroups,
-            viem: {
-              test: /[\\/]node_modules[\\/]viem[\\/]/,
-              name: 'viem',
-              chunks: 'all',  // bundle synchronously, not async
-              priority: 10,
-            },
-          },
-        },
-      };
-    }
 
     return config;
   },
