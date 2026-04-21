@@ -202,32 +202,28 @@ export default function Home() {
 
           {/* RIGHT: Image */}
           <div className="hero-fade-3 relative hidden lg:block">
-            {/* Glow behind image */}
             <div
               className="absolute inset-0 rounded-[32px] pointer-events-none"
-              style={{
-                background: 'radial-gradient(ellipse at center, rgba(34,197,94,0.15) 0%, transparent 70%)',
-                transform: 'scale(1.2)',
-              }}
+              style={{ background: 'radial-gradient(ellipse at center, rgba(34,197,94,0.15) 0%, transparent 70%)', transform: 'scale(1.2)' }}
             />
-            <div className="relative rounded-[32px] overflow-hidden border border-[#1a1a1a]" style={{ aspectRatio: '4/5' }}>
-              {/* Replace src with your nano-banana generated image */}
+            <div className="relative rounded-[32px] overflow-hidden border border-[#1a1a1a] bg-[#050505]" style={{ aspectRatio: '4/5' }}>
+              {/* Fallback: animated terminal if no image */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center space-y-3 opacity-20">
+                  <div className="text-8xl">🧠</div>
+                  <p className="text-xs font-mono text-[#22c55e] uppercase tracking-widest">MemeBrain</p>
+                </div>
+              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/hero-brain.png"
                 alt="MemeBrain AI neural network"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover relative z-10"
                 style={{ filter: 'brightness(0.9) saturate(1.1)' }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
-              {/* Dark vignette overlay */}
-              <div
-                className="absolute inset-0"
-                style={{ background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, transparent 60%, rgba(0,0,0,0.2) 100%)' }}
-              />
-              {/* Bottom fade into page */}
-              <div
-                className="absolute bottom-0 left-0 right-0 h-1/3"
-                style={{ background: 'linear-gradient(to bottom, transparent, black)' }}
-              />
+              <div className="absolute inset-0 z-20" style={{ background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, transparent 60%, rgba(0,0,0,0.2) 100%)' }} />
+              <div className="absolute bottom-0 left-0 right-0 h-1/3 z-20" style={{ background: 'linear-gradient(to bottom, transparent, black)' }} />
             </div>
           </div>
         </div>
@@ -282,7 +278,7 @@ export default function Home() {
               <span style={{ color: '#3f3f46' }}>never sleeps.</span>
             </h2>
             <p className="text-[#71717a] text-lg leading-relaxed mb-10 max-w-md">
-              MemeBrain's risk engine scans tokens in real-time, flagging honeypots and predatory tax configs before they drain your wallet.
+              MemeBrain&apos;s risk engine scans tokens in real-time, flagging honeypots and predatory tax configs before they drain your wallet.
             </p>
             <AITerminal />
           </div>
@@ -340,7 +336,7 @@ export default function Home() {
 
           {/* Bento grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {FEATURES.map((f, i) => (
+            {FEATURES.map((f) => (
               <Link
                 key={f.title}
                 href={f.href}

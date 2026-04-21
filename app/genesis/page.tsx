@@ -9,6 +9,7 @@ import { resolveFourDomain } from '@/lib/safety-compiler';
 import { GenesisSkeleton } from '@/components/genesis-skeleton';
 import { ErrorCard } from '@/components/error-card';
 import { useToast } from '@/components/toast';
+import Image from 'next/image';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -310,7 +311,7 @@ export default function GenesisPage() {
           >
             Describe a concept.
             <br />
-            <span style={{ color: '#3f3f46' }}>We'll build the token.</span>
+            <span style={{ color: '#3f3f46' }}>We&apos;ll build the token.</span>
           </h1>
           <p className="text-sm text-[#52525b] max-w-md mx-auto">
             MemeBrain generates a safe, optimized token configuration with AI-powered Safety Compiler.
@@ -523,9 +524,12 @@ function PreviewCard({
         <div className={`transition-all duration-300 ${revealStep >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
           <div className="flex items-start gap-3">
             {typeof deployResult?.payload?.imgUrl === 'string' && (
-              <img
-                src={deployResult.payload.imgUrl}
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <Image
+                src={deployResult.payload.imgUrl as string}
                 alt={result.name}
+                width={56}
+                height={56}
                 className="w-14 h-14 rounded-xl object-cover border border-[#1a1a1a] shrink-0"
               />
             )}
@@ -649,7 +653,6 @@ function PreviewCard({
               <DeployProgress step={deployStep} txHash={txHash} />
             )}
             {deployError && <p className="text-xs text-red-400">❌ {deployError}</p>}
-
             <div className="flex flex-wrap gap-2">
               {!isConnected ? (
                 <div className="w-full rounded-xl border border-[#141414] bg-[#0a0a0a] p-4 text-center">
@@ -665,14 +668,28 @@ function PreviewCard({
                   {authLoading ? '⏳ Signing in...' : '🔐 Sign in to Four.meme'}
                 </button>
               ) : deployStep === 'done' ? (
-                <a
-                  href={txHash ? `https://bscscan.com/tx/${txHash}` : '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/30 px-4 py-3 text-sm font-bold text-[#22c55e] text-center hover:bg-[#22c55e]/20 transition-all"
-                >
-                  ✅ View on BSCScan
-                </a>
+                <div className="flex-1 space-y-2">
+                  {deployResult?.tokenAddress && (
+                    <a
+                      href={`https://four.meme/token/${deployResult.tokenAddress}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/30 px-4 py-3 text-sm font-bold text-[#22c55e] hover:bg-[#22c55e]/20 transition-all"
+                    >
+                      🚀 View on Four.meme
+                    </a>
+                  )}
+                  {txHash && (
+                    <a
+                      href={`https://bscscan.com/tx/${txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 rounded-full border border-[#141414] px-4 py-2 text-xs text-[#3f3f46] hover:text-white transition-all"
+                    >
+                      View TX on BSCScan
+                    </a>
+                  )}
+                </div>
               ) : (
                 <button
                   onClick={onDeploy}
@@ -684,7 +701,7 @@ function PreviewCard({
               )}
               <button
                 onClick={onReset}
-                className="rounded-full border border-[#141414] px-4 py-3 text-sm text-[#3f3f46] hover:text-white hover:border-[#262626] hover:bg-[#0f0f0f] transition-all"
+                className="rounded-full border border-[#141414] px-4 py-3 text-sm text-[#3f3f46] hover:text-white hover:border-[#262626] hover:bg-[#0f0f0f] transition-all shrink-0"
                 title="Start over"
               >
                 ↩
