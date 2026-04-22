@@ -18,19 +18,19 @@ MemeBrain is an autonomous AI safety layer for [Four.meme](https://four.meme) on
 ### Risk Scanner
 | Overview | Audit Trail |
 |:---:|:---:|
-| ![Risk Scanner](/screenshots/scan-result.png) | ![Audit Trail](/screenshots/scan-audit.png) |
+| ![Risk Scanner](public/scan-result.png) | ![Audit Trail](public/scan-audit.png) |
 | Honeypot detected — CRITICAL score (25/100) | 8-rule audit trail with severity tiers |
 
 ### Token Genesis
 | Token Genesis |
 |:---:|
-| ![Token Genesis](/screenshots/genesis-result.png) |
+| ![Token Genesis](public/genesis.png) |
 | AI generates safe token configs with Safety Certificate |
 
 ### Dividend Monitor
 | Overview | Fee Progress + Sniper Alert |
 |:---:|:---:|
-| ![Monitor Overview](/screenshots/monitor-header.png) | ![Sniper Alert](/screenshots/monitor-progress.png) |
+| ![Monitor Overview](public/monitor-header.png) | ![Sniper Alert](public/monitor-progress.png) |
 | Auto-dispatch countdown + live data | 84.7% progress — sniper alert zone active |
 ---
 
