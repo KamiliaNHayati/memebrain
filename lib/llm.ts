@@ -131,11 +131,11 @@ Respond ONLY with valid JSON, no markdown, no explanation:
 export async function generateTokenFromPrompt(
   prompt: TokenGenPrompt
 ): Promise<TokenGenResult & { source: 'llm' | 'fallback' }> {
-  const apiKey = process.env.BLINK_API_KEY;
+  const apiKey = process.env.LLM_API_KEY;
 
   // If no API key, use fallback immediately
   if (!apiKey) {
-    console.warn('No BLINK_API_KEY set — using fallback suggestion');
+    console.warn('No LLM_API_KEY set — using fallback suggestion');
     return { ...pickFallback(prompt.concept), source: 'fallback' };
   }
 
@@ -234,7 +234,7 @@ Now analyze the token above:`;
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.BLINK_API_KEY}`,
+      'Authorization': `Bearer ${process.env.LLM_API_KEY}`,
     },
     body: JSON.stringify({
       model: 'google/gemini-2.5-flash-lite',

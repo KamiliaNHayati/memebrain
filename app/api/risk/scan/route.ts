@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const result = await analyzeToken(address);
 
     let aiExplanation = null;
-    if (process.env.BLINK_API_KEY) {
+    if (process.env.LLM_API_KEY) {
       try {
         aiExplanation = await generateRiskNarrative(result);
       } catch (e) {

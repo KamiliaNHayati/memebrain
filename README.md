@@ -149,7 +149,7 @@ cp .env.example .env.local
 
 ```env
 # Required — LLM for token generation + risk narration
-BLINK_API_KEY=your_blink_api_key
+LLM_API_KEY=your_llm_api_key
 
 # Optional — override mock mode globally
 NEXT_PUBLIC_APP_MODE=live  # or "mock"
